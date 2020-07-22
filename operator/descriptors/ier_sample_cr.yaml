@@ -30,7 +30,7 @@ spec:
     sc_image_repository: cp.icr.io
     root_ca_secret: icp4a-root-ca
     sc_optional_components: ier
-    sc_deployment_hostname_suffix: "9.30.182.206.nip.io"
+    sc_deployment_hostname_suffix: "{{ meta.name }}.<Required>"
     storage_configuration:
       sc_medium_file_storage_classname: "managed-nfs-storage"
     image_pull_secrets:
@@ -55,7 +55,7 @@ spec:
       image:
         repository: cp.icr.io/cp/cp4a/ier/ier
         tag: ga-521-ier-fp004
-        pull_policy: IfnotPresent
+        pull_policy: IfNotPresent
      # Logging for workloads
       log:
         format: json
@@ -77,7 +77,7 @@ spec:
       ier_production_setting:
         license: accept
       collectd_enable_plugin_write_graphite: false
-      run_as_user: 50001
+      run_as_user: 
      # Specify the names of existing persistent volume claims to be used by your application.
      # Specify an empty string if you don't have existing persistent volume claim.
       datavolume:
