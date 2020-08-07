@@ -16,7 +16,7 @@ metadata:
     app.kubernetes.io/instance: ibm-ier
     app.kubernetes.io/managed-by: ibm-ier
     app.kubernetes.io/name: ibm-ier
-    release: 5.2.1.3
+    release: 5.2.1.4
 spec:
   group: ier.ibm.com
   names:
