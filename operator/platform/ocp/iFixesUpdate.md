@@ -153,8 +153,8 @@ Get the custom resource YAML file that you previously deployed and edit it by fo
 
 2. In the sections for each of the components that are included in your deployment, modify the configuration parameter ecm_configuration.<component>.image.tag to reflect the value for the image loaded, for example:
     ```bash
-       repository: cp.icr.io/cp/cp4a/ier/cpe
-       tag: ga-554-p8cpe-if001
+       repository: cp.icr.io/cp/cp4a/ier/ier
+       tag: ga-5214-ier-if001
    ```     
     > **Tip**: The values of the tags for a given interim fix can be found in the readme provided with that interim fix.
    
