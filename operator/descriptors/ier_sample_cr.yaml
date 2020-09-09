@@ -16,13 +16,13 @@ metadata:
     app.kubernetes.io/instance: ibm-dba
     app.kubernetes.io/managed-by: ibm-dba
     app.kubernetes.io/name: ibm-dba
-    release: 5.1.2.4
+    release: 5.2.1.4
 spec:
   ## TIPS: The names of all variables in the spec field are converted to snake_case by the operator before running ansible
   ## For example, serviceAccount in the spec becomes service_account in ansible.
   ## It is recommended that you perform some type validation in Ansible on the variables to ensure that
   ## your application is receiving expected input.
-
+  appVersion: 5.2.1.4.2
   ## shared configuration among all tribe
   shared_configuration:
     ## This is the deployment context is ier. No update it required.
@@ -54,7 +54,7 @@ spec:
       replica_count: 1
       image:
         repository: cp.icr.io/cp/cp4a/ier/ier
-        tag: ga-521-ier-fp004
+        tag: ga-5214-ier-if002
         pull_policy: IfNotPresent
      # Logging for workloads
       log:
