@@ -1,4 +1,4 @@
-# Configuring IBM Enterprise Records 5.2.1.4
+# Configuring IBM Enterprise Records 5.2.1.5
 
 IBM Enterprise Records provides numerous containerized components for use in your container environment. The configuration settings for the components are recorded and stored in the shared YAML file for operator deployment. After you prepare your environment, you add the values for your configuration settings to the YAML so that the operator can deploy your containers to match your environment. 
 
@@ -27,7 +27,7 @@ If you want to exclude any components from your deployment, leave the section fo
 
 All components require that you deploy the Content Platform Engine container. For that reason, you must complete the values for that section in all deployment use cases.
 
-A description of the configuration parameters is available in [Configuration reference for operators](https://www.ibm.com/support/knowledgecenter/SSNVVQ_5.2.1/com.ibm.p8.installingrm.doc/container/frmin049.htm)
+A description of the configuration parameters is available in [Configuration reference for operators](https://www.ibm.com/support/knowledgecenter/SSNVVQ_5.2.1/com.ibm.p8.installingrm.doc/container/frmin053.htm)
 
 For a more focused YAML file that contains the default value for each Enterprise Records parameter, see the [ier_sample_cr.yaml](../descriptors/ier_sample_cr.yaml). You can use this shorter sample resource file to compile all the values you need for your Enterprise Records environment, then copy the sections into the [ier_v1_ier_cr_template.yaml](../descriptors/ier_v1_ier_cr_template.yaml) file before you deploy.
 
