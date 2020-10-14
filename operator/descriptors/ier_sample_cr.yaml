@@ -23,7 +23,7 @@ spec:
   ## For example, serviceAccount in the spec becomes service_account in ansible.
   ## It is recommended that you perform some type validation in Ansible on the variables to ensure that
   ## your application is receiving expected input.
-  appVersion: 20.0.2.1
+  appVersion: 5.2.1.4.2
   ## shared configuration among all tribe
   shared_configuration:
     ## This is the deployment context is ier. No update it required.
