@@ -5,7 +5,7 @@ If you installed any of the Enterprise Records ga-5.2.1.4 components on a Kubern
 - [Step 1: Get access to the interim fix container images](iFixesUpdate.md#step-1-get-access-to-the-interim-fix-container-images)
 - [Step 2: Get access to the current version of the operator](iFixesUpdate.md#step-2-get-access-to-the-current-version-of-the-operator)
 - [Step 3: Update the installed operator](iFixesUpdate.md#step-3-update-the-installed-operator)
-- [Step 4: Update the custom resource YAML file for your Enterprise Records deployment](iFixesUpdate.md#step-4-update-the-custom-resource-yaml-file-for-your-filenet-content-manager-deployment)
+- [Step 4: Update the custom resource YAML file for your Enterprise Records deployment](iFixesUpdate.md#step-4-update-the-custom-resource-yaml-file-for-your-enterprise-records-deployment)
 - [Step 5: Apply the updated custom resource YAML file](iFixesUpdate.md#step-5-apply-the-updated-custom-resource-yaml-file)
 - [Step 6: Verify the updated automation containers](iFixesUpdate.md#step-6-verify-the-updated-automation-containers)
 
@@ -127,14 +127,14 @@ If the operator in the project (namespace) of your deployment is already upgrade
    Use the interim fix [scripts/ga-5.2.1.4_iFix1/upgradeOperator.sh](../../scripts/upgradeOperator.sh) script to deploy the operator manifest descriptors.
    ```bash
    $ cd ier-samples/operator
-   $ ./scripts/upgradeOperator.sh -i <registry_url>/ier-operator:ga-5.2.1.4-if001 -p 'admin.registrykey' -a accept
+   $ ./scripts/upgradeOperator.sh -i <registry_url>/cp4a-operator:20.0.2-if001 -p 'admin.registrykey' -a accept
    ```
 
    Where *registry_url* is the value for your internal docker registry or `cp.icr.io/cp/cp4a` for the IBM Cloud Entitled Registry,  admin.registrykey is the secret created to access the registry, and *accept* means that you accept the [license](../../LICENSE).
 
-   > **Note**: If you plan to use a non-admin user to install the operator, you must add the user to the `ibm-ier-operator` role. For example:
+   > **Note**: If you plan to use a non-admin user to install the operator, you must add the user to the `ibm-cp4a-operator` role. For example:
    ```bash
-   $ oc adm policy add-role-to-user ibm-ier-operator <user_name>
+   $ oc adm policy add-role-to-user ibm-cp4a-operator <user_name>
    ```   
 4. Monitor the pod until it shows a STATUS of Running:
    ```bash
@@ -142,14 +142,14 @@ If the operator in the project (namespace) of your deployment is already upgrade
    ```   
      > **Note**: When started, you can monitor the operator logs with the following command:
    ```bash
-   $ oc logs -f deployment/ibm-ier-operator -c operator
+   $ oc logs -f deployment/ibm-cp4a-operator -c operator
    ```    
 
 ## Step 4: Update the custom resource YAML file for your Enterprise Records deployment
 
 Get the custom resource YAML file that you previously deployed and edit it by following the instructions for each component:
 
-1. Verify that the release version is ga-5.2.1.4.1.
+1. Verify that the release version is 5.2.1.4.
 
 2. In the sections for each of the components that are included in your deployment, modify the configuration parameter ecm_configuration.<component>.image.tag to reflect the value for the image loaded, for example:
     ```bash
@@ -162,16 +162,6 @@ Get the custom resource YAML file that you previously deployed and edit it by fo
 
    Repeat this step for each component that you want to update to a new version.
    
-3. In the ldap_configuration section, verify that the `lc_bind_secret parameter` is set.
-   The value of the parameter is typically the same secret that is used in the `ecm_configuration.ier_secret_name parameter`. 
-   
-   Example:
-   ```
-     ldap_configuration:
-    lc_bind_secret: ibm-ier-secret # secret is expected to have ldapUsername and ldapPassword keys
-   ```    
-    > **Tip**: The value that you provide for the lc_bind_secret must be the same value that you used previously for the ier-secret value.
-
 ## Step 5: Apply the updated custom resource YAML file
 
 1. Check that all the components that you want to upgrade are configured with updated image tag values and so on.

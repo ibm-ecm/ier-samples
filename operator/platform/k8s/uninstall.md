@@ -2,7 +2,7 @@
 
 ## Delete the operator
 
-To uninstall the deployments and the FileNet Content Manager operator, use the 'deleteOperator.sh' command to delete all the resources that are linked to the operator.
+To uninstall the deployments and the Enterprise records operator, use the 'deleteOperator.sh' command to delete all the resources that are linked to the operator.
 
 ```bash
    ./scripts/deleteOperator.sh
@@ -26,7 +26,7 @@ To uninstall an instance of the operator, you must delete all of the manifest fi
   $ kubectl delete -f descriptors/role_binding.yaml
   $ kubectl delete -f descriptors/role.yaml
   $ kubectl delete -f descriptors/service_account.yaml
-  $ kubectl delete -f descriptors/ier_v1_ier_crd.yaml
+  $ kubectl delete -f descriptors/ibm_cp4a_crd.yaml
 ```
 
 

@@ -1,11 +1,11 @@
-# Updating FileNet Content Manager 5.5.4 on Certified Kubernetes
+# Updating Enterprise Records 5.2.1.4 on Certified Kubernetes
 
-If you installed any of the FileNet Content Manager 5.5.4 components on a Kubernetes cluster, you can update them to a higher interim fix patch release level by using the updated operator and the relevant container iFixes. Required details like the image:tag of the interim fix patch Docker image can be found in the individual interim fix readmes.
+If you installed any of the Enterprise Records 5.2.1.4 components on a Kubernetes cluster, you can update them to a higher interim fix patch release level by using the updated operator and the relevant container iFixes. Required details like the image:tag of the interim fix patch Docker image can be found in the individual interim fix readmes.
 
 - [Step 1: Get access to the interim fix container images](iFixesUpdate.md#step-1-get-access-to-the-interim-fix-container-images)
 - [Step 2: Get access to the current version of the operator](iFixesUpdate.md#step-2-get-access-to-the-current-version-of-the-operator)
 - [Step 3: Update the installed operator](iFixesUpdate.md#step-3-update-the-installed-operator)
-- [Step 4: Update the custom resource YAML file for your FileNet Content Manager deployment](iFixesUpdate.md#step-4-update-the-custom-resource-yaml-file-for-your-filenet-content-manager-deployment)
+- [Step 4: Update the custom resource YAML file for your Enterprise Records deployment](iFixesUpdate.md#step-4-update-the-custom-resource-yaml-file-for-your-enterprise-records-deployment)
 - [Step 5: Apply the updated custom resource YAML file](iFixesUpdate.md#step-5-apply-the-updated-custom-resource-yaml-file)
 - [Step 6: Verify the updated automation containers](iFixesUpdate.md#step-6-verify-the-updated-automation-containers)
 
@@ -90,33 +90,33 @@ If the operator in the project (namespace) of your deployment is already upgrade
    $ git clone git@github.com:ibm-ecm/ier-samples.git
    $ cd ier-samples/operator
    ```
-   The repository contains the scripts and Kubernetes descriptors that are necessary to upgrade the FileNet Content Manager operator.
+   The repository contains the scripts and Kubernetes descriptors that are necessary to upgrade the Enterprise Records operator.
 
 
 ## Step 3: Update the installed operator
 
 1. Log in to your Kubernetes cluster and set the context to the project for your existing deployment.
 
-2. Go to the downloaded container-samples.git for FileNet Content Manager V5.5.4 and replace the files in the `/descriptors` directory with the files from the interim fix `/descriptors` folder.
+2. Go to the downloaded container-samples.git for Enterprise Records V5.5.4 and replace the files in the `/descriptors` directory with the files from the interim fix `/descriptors` folder.
 
    For example:
    ```bash
    $ cd ier-samples/operator/descriptors
-   $ cp ./5.2.1.3_iFix1/* . 
+   $ cp ./5.2.1.4_iFix1/* . 
    ```   
 3. Upgrade the ier-operator on your cluster.
 
-   Use the interim fix [scripts/5.5.4_iFix1/upgradeOperator.sh](../../scripts/upgradeOperator.sh) script to deploy the operator manifest descriptors.
+   Use the interim fix [scripts/5.2.1.4_iFix1/upgradeOperator.sh](../../scripts/upgradeOperator.sh) script to deploy the operator manifest descriptors.
    ```bash
    $ cd container-samples/operator
-   $ ./scripts/5.2.1.3iFix1/upgradeOperator.sh -i <registry_url>/ ier-operator:5.2.1.3-if001 -p 'admin.registrykey' -a accept
+   $ ./scripts/5.2.1.4.iFix1/upgradeOperator.sh -i <registry_url>/ cp4a-operator:20.0.3-if001 -p 'admin.registrykey' -a accept
    ```
 
    Where *registry_url* is the value for your internal docker registry or `cp.icr.io/cp/cp4a` for the IBM Cloud Entitled Registry,  admin.registrykey is the secret created to access the registry, and *accept* means that you accept the [license](../../LICENSE).
 
    > **Note**: If you plan to use a non-admin user to install the operator, you must add the user to the `ibm-fncm-operator` role. For example:
    ```bash
-   $ kubectl adm policy add-role-to-user ibm-fncm-operator <user_name>
+   $ kubectl adm policy add-role-to-user ibm-cp4a-operator <user_name>
    ```   
 4. Monitor the pod until it shows a STATUS of Running:
    ```bash
@@ -124,20 +124,20 @@ If the operator in the project (namespace) of your deployment is already upgrade
    ```   
      > **Note**: When started, you can monitor the operator logs with the following command:
    ```bash
-   $ kubectl logs -f deployment/ibm-ier-operator -c operator
+   $ kubectl logs -f deployment/ibm-cp4a-operator -c operator
    ```    
 
-## Step 4: Update the custom resource YAML file for your FileNet Content Manager deployment
+## Step 4: Update the custom resource YAML file for your Enterprise Records deployment
 
 Get the custom resource YAML file that you previously deployed and edit it by following the instructions for each component:
 
-1. Verify that the release version is 5.2.1.3if0011.
+1. Verify that the release version is 5.2.1.4.
 
 2. In the sections for each of the components that are included in your deployment, modify the configuration parameter ecm_configuration.<component>.image.tag to reflect the value for the image loaded, for example:
 
  ```bash
        repository: cp.icr.io/cp/cp4a/ier/ier
-       tag: 5.2.1.3-if001
+       tag: ga-5214-ier-if001
 	   ```     
     > **Tip**: The values of the tags for a given interim fix can be found in the readme provided with that interim fix.
    

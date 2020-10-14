@@ -7,7 +7,7 @@
 - [Step 5: Deploy the operator manifest files to your cluster](install.md#step-5-deploy-the-operator-manifest-files-to-your-cluster)
 - [Step 6: Configure the software that you want to install](install.md#step-6-configure-the-software-that-you-want-to-install)
 - [Step 7: Apply the custom resources](install.md#step-7-apply-the-custom-resources)
-- [Step 8: Verify that the FileNet Content Manager containers are running](install.md#step-8-verify-that-the-automation-containers-are-running)
+- [Step 8: Verify that the Enterprise Records containers are running](install.md#step-8-verify-that-the-automation-containers-are-running)
 - [Step 9: Complete some post-installation steps](install.md#step-9-complete-some-post-installation-steps)
 - [Step 10: Troubleshooting](install.md#step-10-troubleshooting)
 
@@ -149,7 +149,7 @@ $ kubectl create secret docker-registry admin.registrykey --docker-server=<regis
 ## Step 5: Deploy the operator to your cluster
 
 The operator has a number of descriptors that must be applied.
-  - [descriptors/ier_v1_ier_crd.yaml](../../descriptors/ier_v1_ier_crd.yaml?raw=true) contains the description of the Custom Resource Definition.
+  - [descriptors/ibm_cp4a_crd.yaml](../../descriptors/ibm_cp4a_crd.yaml?raw=true) contains the description of the Custom Resource Definition.
   - [descriptors/operator.yaml](../../descriptors/operator.yaml?raw=true) defines the deployment of the operator code.
   - [descriptors/role.yaml](../../descriptors/role.yaml?raw=true) defines the access of the operator.
   - [descriptors/role_binding.yaml](../../descriptors/role_binding.yaml?raw=true) defines the access of the operator.
@@ -193,7 +193,7 @@ The operator has a number of descriptors that must be applied.
    
     If you want to deploy the operator YAML files without using the deployOperator.sh script, you can use the deploy command to deploy each file, for example:
    ```bash
-   oc apply -f ./descriptors/ier_v1_ier_crd.yaml
+   oc apply -f ./descriptors/ibm_cp4a_crd.yaml
    oc apply -f ./descriptors/service_account.yaml
    oc apply -f ./descriptors/role.yaml
    oc apply -f ./descriptors/role_bingding.yaml
@@ -247,9 +247,8 @@ The operator has a number of descriptors that must be applied.
    
    Example:
    ```
-   ecm_configuration:
-     cpe:
-       run_as_user: 1000110001
+   ier_configuration:
+     run_as_user: 1000110001
    ``` 
 
 
@@ -275,7 +274,7 @@ $ kubectl get services
 
 ## Step 9: Complete post-installation steps
 
-You must complete additional post deployment tasks to make sure your environment is up and running. See [Completing post-deployment tasks](https://www.ibm.com/support/knowledgecenter/SSNVVQ_5.2.1/com.ibm.p8.installingrm.doc/container/frmin049.htm) to follow the post-installation steps. Your tasks will vary depending on whether you used the Initialization and Verify containers to set up your environment.
+You must complete additional post deployment tasks to make sure your environment is up and running. See [Completing post-deployment tasks](https://www.ibm.com/support/knowledgecenter/SSNVVQ_5.2.1/com.ibm.p8.installingrm.doc/container/frmin026.htm) to follow the post-installation steps. Your tasks will vary depending on whether you used the Initialization and Verify containers to set up your environment.
 
 ## Step 10: Troubleshooting
 

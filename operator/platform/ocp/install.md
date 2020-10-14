@@ -180,7 +180,7 @@ $ oc get secret
 ## Step 5: Deploy the operator to your cluster
 
 The operator has a number of descriptors that must be applied.
-  - [descriptors/ier_v1_ier_crd.yaml](../../descriptors/ier_v1_ier_crd.yaml?raw=true) contains the description of the Custom Resource Definition.
+  - [descriptors/ibm_cp4a_crd.yaml](../../descriptors/ibm_cp4a_crd.yaml?raw=true) contains the description of the Custom Resource Definition.
   - [descriptors/operator.yaml](../../descriptors/operator.yaml?raw=true) defines the deployment of the operator code.
   - [descriptors/role.yaml](../../descriptors/role.yaml?raw=true) defines the access of the operator.
   - [descriptors/role_binding.yaml](../../descriptors/role_binding.yaml?raw=true) defines the access of the operator.
@@ -225,7 +225,7 @@ The operator has a number of descriptors that must be applied.
    ```   
    If you want to deploy the operator YAML files without using the deployOperator.sh script, you can use the deploy command to deploy each file, for example:
    ```bash
-   oc apply -f ./descriptors/ier_v1_ier_crd.yaml
+   oc apply -f ./descriptors/ibm_cp4a_crd.yaml
    oc apply -f ./descriptors/service_account.yaml
    oc apply -f ./descriptors/role.yaml
    oc apply -f ./descriptors/role_bingding.yaml
@@ -287,7 +287,7 @@ $ oc get deployment -n <namespace>
 
 ## Step 9: Complete post-installation steps
 
-You must complete additional post deployment tasks to make sure your environment is up and running. See [Completing post-deployment tasks](https://www.ibm.com/support/knowledgecenter/SSNVVQ_5.2.1/com.ibm.p8.installingrm.doc/container/frmin025.htm) to follow the post-installation steps. Your tasks will vary depending on whether you used the Initialization and Verify containers to set up your environment.
+You must complete additional post deployment tasks to make sure your environment is up and running. See [Completing post-deployment tasks](https://www.ibm.com/support/knowledgecenter/SSNVVQ_5.2.1/com.ibm.p8.installingrm.doc/container/frmin026.htm) to follow the post-installation steps. Your tasks will vary depending on whether you used the Initialization and Verify containers to set up your environment.
 
 ## Step 10: Troubleshooting
 

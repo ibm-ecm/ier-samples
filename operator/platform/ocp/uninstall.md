@@ -26,7 +26,7 @@ To uninstall an instance of the operator, you must delete all of the manifest fi
   $ oc delete -f descriptors/role_binding.yaml
   $ oc delete -f descriptors/role.yaml
   $ oc delete -f descriptors/service_account.yaml
-  $ oc delete -f descriptors/ier_v1_ier_crd.yaml
+  $ oc delete -f descriptors/ibm_cp4a_crd.yaml
 ```
 
 
