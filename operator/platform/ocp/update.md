@@ -1,4 +1,4 @@
-# Updating IBM Enterprise Records ga-5.2.1.4 on Red Hat OpenShift
+# Updating IBM Enterprise Records ga-5.2.1.5 on Red Hat OpenShift
 
 - [Step 1: Modify the software that is installed](update.md#step-1-modify-the-software-that-is-installed)
 - [Step 2: Apply the updated custom resources](update.md#step-2-apply-the-updated-custom-resources)

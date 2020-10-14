@@ -137,11 +137,9 @@ Get the custom resource YAML file that you previously deployed and edit it by fo
 
  ```bash
        repository: cp.icr.io/cp/cp4a/ier/ier
-       tag: 5.2.1.5-if001
+       tag: ga-5215-ier-if001
 	   ```     
     > **Tip**: The values of the tags for a given interim fix can be found in the readme provided with that interim fix.
-   
-    > **Tip**: Verify that the secret named in the CR YAML file as the imagePullSecrets is valid. Note that the secret might be expired, in which case you must re-create the secret.
 
    Repeat this step for each component that you want to update to a new version.
    

@@ -186,7 +186,7 @@ The operator has a number of descriptors that must be applied.
    
    The script [deployOperator.sh](../../scripts/deployOperator.sh) can be used to deploy the descriptors and the operator pod.
    ```bash
-   $ ./scripts/deployOperator.sh -i <registry_url>/ibm-cp4a-operator:20.0.2 -p '<secret_name>' -n <Namespace>
+   $ ./scripts/deployOperator.sh -i <registry_url>/ibm-cp4a-operator:20.0.3 -p '<secret_name>' -n <Namespace>
    ```
 
    > **Note**: If you do not specify the -i and -n options the operator is deployed in the default namespace at this URL: master_node:8500/default/ibm-cp4a-operator:v1.0.0.
