@@ -7,7 +7,7 @@
 - [Step 5: Deploy the operator manifest files to your cluster](install.md#step-5-deploy-the-operator-manifest-files-to-your-cluster)
 - [Step 6: Configure the software that you want to install](install.md#step-6-configure-the-software-that-you-want-to-install)
 - [Step 7: Apply the custom resources](install.md#step-7-apply-the-custom-resources)
-- [Step 8: Verify that the FileNet Content Manager containers are running](install.md#step-8-verify-that-the-automation-containers-are-running)
+- [Step 8: Verify that the Enterprise Records containers are running](install.md#step-8-verify-that-the-automation-containers-are-running)
 - [Step 9: Complete some post-installation steps](install.md#step-9-complete-some-post-installation-steps)
 - [Step 10: Troubleshooting](install.md#step-10-troubleshooting)
 
