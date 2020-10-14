@@ -18,11 +18,13 @@ metadata:
     app.kubernetes.io/managed-by: ibm-dba
     app.kubernetes.io/name: ibm-dba
     release: 5.2.1.4
+
 spec:
   ##########################################################################
   ## This section contains the shared configuration for all CP4A components #
   ##########################################################################
   appVersion: 5.2.1.4.2
+
   shared_configuration:
 
     ## This is the deployment context is ier. No update it required.
