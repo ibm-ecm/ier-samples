@@ -21,4 +21,4 @@ To prepare your operator and deploy your IBM Enterprise Records components, foll
 
 ## Completing post deployment configuration
 
-After you deploy your container images, you perform some required and some optional steps to get your IBM Enterprise Records environment up and running. For detailed instructions, see [Completing post deployment tasks for IBM IBM Enterprise Records](https://www.ibm.com/support/knowledgecenter/SSNVVQ_5.2.1/com.ibm.p8.installingrm.doc/container/frmin025.htm)
+After you deploy your container images, you perform some required and some optional steps to get your IBM Enterprise Records environment up and running. For detailed instructions, see [Completing post deployment tasks for IBM IBM Enterprise Records](https://www.ibm.com/support/knowledgecenter/SSNVVQ_5.2.1/com.ibm.p8.installingrm.doc/container/frmin026.htm)
