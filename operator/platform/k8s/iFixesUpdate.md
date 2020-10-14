@@ -109,7 +109,7 @@ If the operator in the project (namespace) of your deployment is already upgrade
    Use the interim fix [scripts/5.2.1.5.iFix1/upgradeOperator.sh](../../scripts/upgradeOperator.sh) script to deploy the operator manifest descriptors.
    ```bash
    $ cd container-samples/operator
-   $ ./scripts/5.2.1.5iFix1/upgradeOperator.sh -i <registry_url>/ ier-operator:5.2.1.5-if001 -p 'admin.registrykey' -a accept
+   $ ./scripts/5.2.1.5iFix1/upgradeOperator.sh -i <registry_url>/cp4a-operator:20.0.3-if001 -p 'admin.registrykey' -a accept
    ```
 
    Where *registry_url* is the value for your internal docker registry or `cp.icr.io/cp/cp4a` for the IBM Cloud Entitled Registry,  admin.registrykey is the secret created to access the registry, and *accept* means that you accept the [license](../../LICENSE).
