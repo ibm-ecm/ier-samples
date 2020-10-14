@@ -102,11 +102,11 @@ If the operator in the project (namespace) of your deployment is already upgrade
    For example:
    ```bash
    $ cd ier-samples/operator/descriptors
-   $ cp ./5.2.1.5_iFix1/* . 
+   $ cp ./5.2.1.5.iFix1/* . 
    ```   
 3. Upgrade the ier-operator on your cluster.
 
-   Use the interim fix [scripts/5.2.1.5_iFix1/upgradeOperator.sh](../../scripts/upgradeOperator.sh) script to deploy the operator manifest descriptors.
+   Use the interim fix [scripts/5.2.1.5.iFix1/upgradeOperator.sh](../../scripts/upgradeOperator.sh) script to deploy the operator manifest descriptors.
    ```bash
    $ cd container-samples/operator
    $ ./scripts/5.2.1.5iFix1/upgradeOperator.sh -i <registry_url>/ ier-operator:5.2.1.5-if001 -p 'admin.registrykey' -a accept
@@ -127,7 +127,7 @@ If the operator in the project (namespace) of your deployment is already upgrade
    $ kubectl logs -f deployment/ibm-cp4a-operator -c operator
    ```    
 
-## Step 4: Update the custom resource YAML file for your FileNet Content Manager deployment
+## Step 4: Update the custom resource YAML file for your IBM Enterprise Records deployment
 
 Get the custom resource YAML file that you previously deployed and edit it by following the instructions for each component:
 
