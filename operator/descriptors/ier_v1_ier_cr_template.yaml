@@ -37,9 +37,6 @@ spec:
     sc_ingress_tls_secret_name: <Required>
     ## This is the deployment type and the possible values are: user, non-production, and production.
     sc_deployment_license: 
-## FileNet Content Manager (FNCM) license and possible values are: user, non-production, and production.
-    ## This value could be different from the rest of the licenses.
-    sc_deployment_fncm_license: "<Required>"
     ## All CP4A components must use/share the image_pull_secrets to pull images
     image_pull_secrets: 
     - admin.registrykey

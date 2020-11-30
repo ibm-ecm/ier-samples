@@ -46,9 +46,6 @@ spec:
     image_pull_secrets:
     - "admin.registrykey"
     sc_deployment_license: User
-    ## FileNet Content Manager (FNCM) license and possible values are: user, non-production, and production.
-    ## This value could be different from the rest of the licenses.
-    sc_deployment_fncm_license: "<Required>"
     sc_deployment_type: enterprise
     ## The platform to be deployed specified by the user.  Possible values are: OCP, ROKS, and other.  This is normally populated by the User script
     ## based on input from the user.
