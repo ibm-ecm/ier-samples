@@ -6,7 +6,7 @@ IBM IBM Enterprise Records offers enterprise-level scalability and flexibility t
 
 Perform the following tasks to prepare to deploy your IBM Enterprise Records images on Kubernetes:
 
-- Prepare your IBM Enterprise Records environment. These procedures include setting up databases, LDAP, storage, and configuration files that are required for use and operation. You must complete all of the [preparation steps for IBM Enterprise Records]( https://www.ibm.com/support/knowledgecenter/SSNVVQ_5.2.1/com.ibm.p8.installingrm.doc/containers/frmin012.htm) before you are ready to deploy the container images. 
+- Prepare your IBM Enterprise Records environment. These procedures include setting up storage and configuration files that are required for use and operation. You must complete all of the [preparation steps for IBM Enterprise Records]( https://www.ibm.com/support/knowledgecenter/SSNVVQ_5.2.1/com.ibm.p8.installingrm.doc/containers/frmin012.htm) before you are ready to deploy the container images. 
 
 - Prepare your Kubernetes environment. See [Preparing for deployment with an operator]( https://www.ibm.com/support/knowledgecenter/SSNVVQ_5.2.1/com.ibm.p8.installingrm.doc/containers/frmin012.htm)
 
