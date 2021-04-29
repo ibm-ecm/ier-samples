@@ -63,7 +63,7 @@ spec:
       replica_count: 2
       image:
         repository: cp.icr.io/cp/cp4a/ier/ier
-        tag: ga-5215-ier-if002
+        tag: ga-5215-ier-if003
         pull_policy: IfNotPresent
      # Logging for workloads
       log:
