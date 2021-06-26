@@ -1,6 +1,6 @@
-# Updating Enterprise Records ga-5.2.1.4 on Red Hat OpenShift
+# Updating Enterprise Records ga-5.2.1.5 on Red Hat OpenShift
 
-If you installed any of the Enterprise Records ga-5.2.1.4 components on a Kubernetes cluster, you can update them to a higher interim fix patch release level by using the updated operator and the relevant container iFixes. Required details like the image:tag of the interim fix patch Docker image can be found in the individual interim fix readmes.
+If you installed any of the Enterprise Records ga-5.2.1.5 components on a Kubernetes cluster, you can update them to a higher interim fix patch release level by using the updated operator and the relevant container iFixes. Required details like the image:tag of the interim fix patch Docker image can be found in the individual interim fix readmes.
 
 - [Step 1: Get access to the interim fix container images](iFixesUpdate.md#step-1-get-access-to-the-interim-fix-container-images)
 - [Step 2: Get access to the current version of the operator](iFixesUpdate.md#step-2-get-access-to-the-current-version-of-the-operator)
@@ -115,19 +115,19 @@ If the operator in the project (namespace) of your deployment is already upgrade
 
 1. Log in to your Kubernetes cluster and set the context to the project for your existing deployment.
 
-2. Go to the downloaded ier-samples.git for Enterprise Records Vga-5.2.1.4 and replace the files in the `/descriptors` directory with the files from the interim fix `/descriptors` folder.
+2. Go to the downloaded ier-samples.git for Enterprise Records V5.2.1.5 and replace the files in the `/descriptors` directory with the files from the interim fix `/descriptors` folder.
 
    For example:
    ```bash
    $ cd ier-samples/operator/descriptors
-   $ cp ./ga-5.2.1.4_iFix1/* . 
+   $ cp ./ga-5.2.1.5.iFix1/* . 
    ```   
 3. Upgrade the ier-operator on your project.
 
-   Use the interim fix [scripts/ga-5.2.1.4_iFix1/upgradeOperator.sh](../../scripts/upgradeOperator.sh) script to deploy the operator manifest descriptors.
+   Use the interim fix [scripts/ga-5.2.1.5.iFix1/upgradeOperator.sh](../../scripts/upgradeOperator.sh) script to deploy the operator manifest descriptors.
    ```bash
    $ cd ier-samples/operator
-   $ ./scripts/upgradeOperator.sh -i <registry_url>/ier-operator:ga-5.2.1.4-if001 -p 'admin.registrykey' -a accept
+   $ ./scripts/upgradeOperator.sh -i <registry_url>/cp4a-operator:20.0.3-if001 -p 'admin.registrykey' -a accept
    ```
 
    Where *registry_url* is the value for your internal docker registry or `cp.icr.io/cp/cp4a` for the IBM Cloud Entitled Registry,  admin.registrykey is the secret created to access the registry, and *accept* means that you accept the [license](../../LICENSE).
@@ -142,19 +142,19 @@ If the operator in the project (namespace) of your deployment is already upgrade
    ```   
      > **Note**: When started, you can monitor the operator logs with the following command:
    ```bash
-   $ oc logs -f deployment/ibm-ier-operator -c operator
+   $ oc logs -f deployment/ibm-cp4a-operator -c operator
    ```    
 
 ## Step 4: Update the custom resource YAML file for your Enterprise Records deployment
 
 Get the custom resource YAML file that you previously deployed and edit it by following the instructions for each component:
 
-1. Verify that the release version is ga-5.2.1.4.1.
+1. Verify that the release version is 5.2.1.5.1.
 
 2. In the sections for each of the components that are included in your deployment, modify the configuration parameter ecm_configuration.<component>.image.tag to reflect the value for the image loaded, for example:
     ```bash
-       repository: cp.icr.io/cp/cp4a/ier/cpe
-       tag: ga-554-p8cpe-if001
+       repository: cp.icr.io/cp/cp4a/ier/ier
+       tag: ga-5215-ier-if001
    ```     
     > **Tip**: The values of the tags for a given interim fix can be found in the readme provided with that interim fix.
    
@@ -162,16 +162,6 @@ Get the custom resource YAML file that you previously deployed and edit it by fo
 
    Repeat this step for each component that you want to update to a new version.
    
-3. In the ldap_configuration section, verify that the `lc_bind_secret parameter` is set.
-   The value of the parameter is typically the same secret that is used in the `ecm_configuration.ier_secret_name parameter`. 
-   
-   Example:
-   ```
-     ldap_configuration:
-    lc_bind_secret: ibm-ier-secret # secret is expected to have ldapUsername and ldapPassword keys
-   ```    
-    > **Tip**: The value that you provide for the lc_bind_secret must be the same value that you used previously for the ier-secret value.
-
 ## Step 5: Apply the updated custom resource YAML file
 
 1. Check that all the components that you want to upgrade are configured with updated image tag values and so on.

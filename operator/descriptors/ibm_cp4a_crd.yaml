@@ -16,7 +16,7 @@ metadata:
     app.kubernetes.io/instance: ibm-dba
     app.kubernetes.io/managed-by: ibm-dba
     app.kubernetes.io/name: ibm-dba
-    release: 5.2.1.4
+    release: 21.0.2
 spec:
   group: icp4a.ibm.com
   names:

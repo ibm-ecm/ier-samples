@@ -26,7 +26,7 @@ To uninstall an instance of the operator, you must delete all of the manifest fi
   $ kubectl delete -f descriptors/role_binding.yaml
   $ kubectl delete -f descriptors/role.yaml
   $ kubectl delete -f descriptors/service_account.yaml
-  $ kubectl delete -f descriptors/ier_v1_ier_crd.yaml
+  $ kubectl delete -f descriptors/ibm_cp4a_crd.yaml
 ```
 
 

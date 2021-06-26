@@ -1,4 +1,4 @@
-# Installing IBM Enterprise Records ga-5.2.1.4 on Red Hat OpenShift
+# Installing IBM Enterprise Records ga-5.2.1.5 on Red Hat OpenShift
 
 - [Step 1: Create a namespace and get access to the container images](install.md#step-1-create-a-namespace-and-get-access-to-the-container-images)
 - [Step 2: Prepare your environment for IBM Enterprise Records software](install.md#step-2-prepare-your-environment-for-automation-software)
@@ -97,7 +97,7 @@ First, create a namespce. Then, you can access the container images in the IBM D
 
 Before you install any of the containerized software:
 
-1. Go to the prerequisites page in the [IBM Enterprise Records ga-5.2.1.4](https://www.ibm.com/support/knowledgecenter/SSNVVQ_5.2.1/com.ibm.p8.installingrm.doc/container/frmin012.htm) Knowledge Center.
+1. Go to the prerequisites page in the [IBM Enterprise Records ga-5.2.1.5](https://www.ibm.com/support/knowledgecenter/SSNVVQ_5.2.1/com.ibm.p8.installingrm.doc/container/frmin012.htm) Knowledge Center.
 2. Follow the instructions on preparing your environment for the software components that you want to install.
 
   How much preparation you need to do depends on what you want to install and how familiar you are with your environment.
@@ -180,7 +180,7 @@ $ oc get secret
 ## Step 5: Deploy the operator to your cluster
 
 The operator has a number of descriptors that must be applied.
-  - [descriptors/ier_v1_ier_crd.yaml](../../descriptors/ier_v1_ier_crd.yaml?raw=true) contains the description of the Custom Resource Definition.
+  - [descriptors/ibm_cp4a_crd.yaml](../../descriptors/ibm_cp4a_crd.yaml?raw=true) contains the description of the Custom Resource Definition.
   - [descriptors/operator.yaml](../../descriptors/operator.yaml?raw=true) defines the deployment of the operator code.
   - [descriptors/role.yaml](../../descriptors/role.yaml?raw=true) defines the access of the operator.
   - [descriptors/role_binding.yaml](../../descriptors/role_binding.yaml?raw=true) defines the access of the operator.
@@ -225,7 +225,7 @@ The operator has a number of descriptors that must be applied.
    ```   
    If you want to deploy the operator YAML files without using the deployOperator.sh script, you can use the deploy command to deploy each file, for example:
    ```bash
-   oc apply -f ./descriptors/ier_v1_ier_crd.yaml
+   oc apply -f ./descriptors/ibm_cp4a_crd.yaml
    oc apply -f ./descriptors/service_account.yaml
    oc apply -f ./descriptors/role.yaml
    oc apply -f ./descriptors/role_bingding.yaml
