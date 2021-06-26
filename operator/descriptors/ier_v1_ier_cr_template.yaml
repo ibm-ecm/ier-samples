@@ -17,12 +17,12 @@ metadata:
     app.kubernetes.io/instance: ibm-dba
     app.kubernetes.io/managed-by: ibm-dba
     app.kubernetes.io/name: ibm-dba
-    release: 5.2.1.5
+    release: 5.2.1.6
 spec:
   ##########################################################################
   ## This section contains the shared configuration for all CP4A components #
   ##########################################################################
-  appVersion: 5.2.1.5
+  appVersion: 5.2.1.6
   ## MUST exist, used to accept ibm license, valid value only can be "accept"
   ibm_license: ""
   shared_configuration:
