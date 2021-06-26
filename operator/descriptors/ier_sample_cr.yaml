@@ -34,6 +34,9 @@ spec:
     sc_optional_components: ier
     ## Specify the RunAsUser for the security context of the pod.  This is usually a numeric value that corresponds to a user ID.
     sc_run_as_user:
+    ## Shared custom TLS secret which will be used to sign all external routes if defined.
+    ## If this is not defined, all external routes will be signed with `root_ca_secret`
+    external_tls_certificate_secret:
     ## For ROKS, this is used to enable the creation of ingresses. The default value is "false", which routes will be created.
     sc_ingress_enable: false
     ## For ROKS Ingress, provide TLS secret name for Ingress controller.
