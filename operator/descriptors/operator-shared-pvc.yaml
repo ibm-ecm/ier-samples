@@ -34,7 +34,7 @@ metadata:
 
     app.kubernetes.io/name: ibm-dba
 
-    release: 20.0.3
+    release: 21.0.2
 
 spec:
 
@@ -68,7 +68,7 @@ metadata:
 
     app.kubernetes.io/name: ibm-dba
 
-    release: 20.0.3
+    release: 21.0.2
 
 spec:
 
