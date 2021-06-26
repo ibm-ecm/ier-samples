@@ -16,7 +16,7 @@ metadata:
     app.kubernetes.io/instance: ibm-dba
     app.kubernetes.io/managed-by: ibm-dba
     app.kubernetes.io/name: ibm-dba
-    release: 20.0.3
+    release: 21.0.2
 spec:
   replicas: 1
   selector:
@@ -29,16 +29,16 @@ spec:
         app.kubernetes.io/instance: ibm-dba
         app.kubernetes.io/managed-by: ibm-dba
         app.kubernetes.io/name: ibm-dba
-        release: 20.0.3
+        release: 21.0.2
       annotations:
         productID: "5737-I23"
         productName: "IBM Cloud Pak for Business Automation"
-        productVersion: "20.0.3"
+        productVersion: "21.0.2"
         productChargedContainers: ""
         productMetric: "VIRTUAL_PROCESSOR_CORE"
         cloudpakId: "94a9c8c358bb43ba8fbdea62e7e166a5"
         cloudpakName: "IBM Cloud Pak for Business Automation"
-        cloudpakVersion: "20.0.3"
+        cloudpakVersion: "21.0.2"
     spec:
       hostNetwork: false
       hostPID: false
@@ -66,7 +66,7 @@ spec:
       containers:
         - name: operator
           # Replace this with the built image name
-          image: "cp.stg.icr.io/cp/cp4a/icp4a-operator:20.0.3"
+          image: "cp.stg.icr.io/cp/cp4a/icp4a-operator:21.0.2"
           imagePullPolicy: "IfNotPresent"
           securityContext:
             allowPrivilegeEscalation: false
