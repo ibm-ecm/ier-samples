@@ -53,7 +53,7 @@ spec:
     sc_optional_components: ier
 
     ## The deployment type as selected by the user.  Possible values are: demo, enterprise
-    sc_deployment_type: enterprise
+    sc_deployment_type: Starter
 
     ## The platform to be deployed specified by the user.  Possible values are: OCP and other.  This is normally populated by the User script 
     ## based on input from the user.
