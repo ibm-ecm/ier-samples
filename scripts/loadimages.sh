@@ -1,7 +1,24 @@
 #!/bin/bash
+# set -x
+###############################################################################
+#
+# Licensed Materials - Property of IBM
+#
+# (C) Copyright IBM Corp. 2021. All Rights Reserved.
+#
+# US Government Users Restricted Rights - Use, duplication or
+# disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+#
+###############################################################################
+CUR_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PARENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 
-echo -e "\033[1;31mImportant! Please ensure that you had login to the target Docker registry in advance. \033[0m"
-echo -e "\033[1;31mImportant! The load image sample script is for x86_64, amd64, or i386 platforms only.\n \033[0m"
+echo -e "\033[1;31mImportant! The load image sample script is for x86_64, amd64, or i386 platforms only. \033[0m"
+echo -e "\033[1;31mImportant! Please ensure that: \n\
+    1. you had login to the target Docker registry in advance. \n\
+    2. you had login to IBM Entitiled Image Registry in advance.  \n\
+    3. you had skopeo installed in advance. \033[0m \n" 
+
 
 ARCH=$(arch)
 case ${ARCH} in
@@ -14,41 +31,45 @@ case ${ARCH} in
     ;;
 esac
 
-
 function showHelp {
-    echo -e "\nUsage: loadimages.sh -p path/to/ppa_archive.tgz -r docker_registry [-l]\n"
+    echo -e "\nUsage: loadimages.sh -r docker_registry [-m]\n"
     echo "Options:"
     echo "  -h  Display help"
-    echo "  -p  PPA archive files location or archive filename"
-    echo "      For example: /Downloads/PPA or /Downloads/PPA/ImageArchive.tgz or /Downloads/PPA/ImageArchive.tar.gz"
-    echo "  -r  Target Docker registry and namespace"
-    echo "      For example: mycorp-docker-local.mycorp.com/image-space"
-    echo "  -l  Optional: Target a local registry"
+    echo "  -r  Target Docker registry"
+    echo "      For example: mycorp-docker-local.mycorp.com"
+    echo "  -m  Optional: wheter to run the script in dev mode or BAW standalone mode, below are acceptable values:"
+    echo "      if set as 'dev', then will pull images from IBM Staging Image Registry"
+    echo "      if set as 'baw', run for BAW standalone mode and pull images from IBM Image Registry"
+    echo "      if set as 'baw-dev', run for BAW standalone mode and pull images from IBM Staging Image Registry"
 }
 
 # initialize variables
 unset ppa_path
 unset target_docker_repo
-local_registry=false
+unset DEPLOYMENT_TYPE
+unset SCRIPT_MODE
+unset PATTERNS_SELECTED
+PLATFORM_SELECTED="other" # This is the default value and will be reset by select_pattern.sh
 
+unset CR_FILES
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
+LOG_FILE="${CUR_DIR}/lodimages.log" # Keep image upload logs
+touch $LOG_FILE && echo '' > $LOG_FILE # Reset log content
 
 if [[ $1 == "" ]]
 then
     showHelp
     exit -1
 else
-    while getopts ":hlp:r:" opt; do
+    while getopts ":h:m:r:" opt; do
         case "$opt" in
         h|\?)
             showHelp
             exit 0
             ;;
-        p)  ppa_path=${OPTARG}
-            ;;
         r)  target_docker_repo=${OPTARG}
             ;;
-        l)  local_registry=true
+        m)  SCRIPT_MODE=${OPTARG}
             ;;
         :)  echo "Invalid option: -$OPTARG requires an argument"
             showHelp
@@ -59,26 +80,13 @@ else
 
 fi
 
-shift $((OPTIND-1))
-
-echo "ppa_path: $ppa_path"
-
-# check required parameters
-if [ -z "$ppa_path" ]
-then
-    echo "Need to input PPA archive files location or name value."
-    showHelp
-    exit -1
-elif `test -f $ppa_path` || `test -d $ppa_path`
-then
-    arr_ppa_archive=( $(find ${ppa_path} -name "*.tgz" -o -name "*.tar.gz") )
-    echo "arr_ppa_archive: $arr_ppa_archive"
+if [[ "${SCRIPT_MODE}" =~ "baw" ]]; then
+    cr_file_name="" # BAW standalone doesn't need foundation CR.
 else
-    echo "Input PPA archive files location or name invalid! ($ppa_path) Exit and try again."
-    showHelp
-    exit -1
+    cr_file_name="foundation" # Always include FC foundation CR.
 fi
 
+# check required parameters
 echo "target_docker_repo: $target_docker_repo"
 if [ -z "$target_docker_repo" ]
 then
@@ -87,63 +95,48 @@ then
     exit -1
 fi
 
-# reset counter
-_ind=0
+function prepare_pattern_file(){
+    DEPLOY_TYPE_IN_FILE_NAME="production_FC"
+    FOUNDATION_PATTERN_FILE=${PARENT_DIR}/descriptors/patterns/ibm_cp4a_cr_${DEPLOYMENT_TYPE}_foundation.yaml
+    CONTENT_PATTERN_FILE=${PARENT_DIR}/descriptors/patterns/ibm_cp4a_cr_${DEPLOY_TYPE_IN_FILE_NAME}_content.yaml
+    APPLICATION_PATTERN_FILE=${PARENT_DIR}/descriptors/patterns/ibm_cp4a_cr_${DEPLOY_TYPE_IN_FILE_NAME}_application.yaml
+    DECISIONS_PATTERN_FILE=${PARENT_DIR}/descriptors/patterns/ibm_cp4a_cr_${DEPLOY_TYPE_IN_FILE_NAME}_decisions.yaml
+    ADS_PATTERN_FILE=${PARENT_DIR}/descriptors/patterns/ibm_cp4a_cr_${DEPLOY_TYPE_IN_FILE_NAME}_decisions_ads.yaml
+    ARIA_PATTERN_FILE=${PARENT_DIR}/descriptors/patterns/ibm_cp4a_cr_${DEPLOY_TYPE_IN_FILE_NAME}_document_processing.yaml
+    WORKFLOW_PATTERN_FILE=${PARENT_DIR}/descriptors/patterns/ibm_cp4a_cr_${DEPLOY_TYPE_IN_FILE_NAME}_workflow.yaml
+    WORKSTREAMS_PATTERN_FILE=${PARENT_DIR}/descriptors/patterns/ibm_cp4a_cr_${DEPLOY_TYPE_IN_FILE_NAME}_workstreams.yaml
+    WORKFLOW_AUTHOR_PATTERN_FILE=${PARENT_DIR}/descriptors/patterns/ibm_cp4a_cr_${DEPLOY_TYPE_IN_FILE_NAME}_workflow_authoring.yaml
+}
 
-for ppa_file in ${arr_ppa_archive[@]}
-do
-    echo -e "\nCheck image archives in the PPA package: "$ppa_file
-    # check manifest.json
-    tar -zxvf $ppa_file manifest.json
-    # get image archive files list in current PPA
-    arr_img_gz=( $(grep archive manifest.json | awk '{print $2}' | sed 's/\"//g') )
-    echo "Image archives list in ${ppa_file}:"
-    echo ${arr_img_gz[@]}
-    echo "Image archives in "$ppa_file" count: "${#arr_img_gz[@]}
-
-    echo -e "\nLoad docker images from image archives into local registry."
-    if [ ${#arr_img_gz[@]} -gt 0 ]
-    then
-        for img_gz_file in ${arr_img_gz[@]}
-        do
-            if [[ $img_gz_file == images/* ]]
-            then
-                echo "Loading image file: "$img_gz_file
-                # echo "tar -zxf ${ppa_file} ${img_gz_file} -O | docker load -q"
-                load_cmd_output=`tar -zOxf ${ppa_file} ${img_gz_file} | docker load -q`
-                echo $load_cmd_output
-                arr_img_load[$_ind]=${load_cmd_output#*Loaded image: }
-
-                docker tag ${arr_img_load[$_ind]} ${target_docker_repo}/${arr_img_load[$_ind]}
-                if ! $local_registry
-                then
-                    docker push ${target_docker_repo}/${arr_img_load[$_ind]} | grep -e repository -e digest -e unauthorized
-                    docker rmi -f ${arr_img_load[$_ind]} ${target_docker_repo}/${arr_img_load[$_ind]} | grep -e unauthorized
-                    echo "Pushed image: "${target_docker_repo}/${arr_img_load[$_ind]}
-                fi
-                let _ind++
-            fi
-        done
-        echo "PPA package "$ppa_file" was processed completely."
-    else
-        echo "No image archive found in "$ppa_file
-        continue
+function push_images(){
+    DEPLOY_TYPE_IN_FILE_NAME="production_FC"
+    # Get CR list according to selected patterns, FC foundation CR will be included. 
+    for item in ${cr_file_name[@]}
+    do
+        CR_FILES[${#CR_FILES[*]}]="${PARENT_DIR}/descriptors/patterns/ibm_cp4a_cr_${DEPLOY_TYPE_IN_FILE_NAME}_${item}.yaml"
+    done
+    # For starter deployment, including ibm_cp4a_cr_starter_foundation.yaml as well.
+    if [[ "$DEPLOYMENT_TYPE" == "starter" ]]; then
+        CR_FILES[${#CR_FILES[*]}]="${PARENT_DIR}/descriptors/patterns/ibm_cp4a_cr_starter_foundation.yaml"
     fi
+
     
-done
 
-# summary list
-if $local_registry
-then
-    status="load"
+    source ${CUR_DIR}/helper/extract_and_push_images.sh $CR_FILES $target_docker_repo 2>&1| tee -a $LOG_FILE
+}
+
+# Import common utilities and environment variables
+source ${CUR_DIR}/helper/common.sh
+validate_cli # Make sure user install yq
+source ${CUR_DIR}/helper/select_deployment_type.sh
+source ${CUR_DIR}/helper/select_platform.sh
+if [[ "${SCRIPT_MODE}" =~ "baw" ]]; then
+    # For BAW stand alone delivery, no need to show pattern list since there is only one pattern
+    # Will extra image list from ibm_cp4a_cr_production_FC_workflow-standalone.yaml for both starter and production deployment
+    cr_file_name[${#cr_file_name[*]}]="workflow-standalone"
 else
-    status="push"
+    source ${CUR_DIR}/helper/select_pattern.sh
+    source ${CUR_DIR}/helper/map_pattern_and_CR.sh
 fi
-echo -e "\nDocker images ${status} to ${target_docker_repo} completed, and check the following images in the Docker registry:"
-for img_load in ${arr_img_load[@]}
-do
-    echo "     -  ${target_docker_repo}/${img_load}"
-done
 
-#
-rm -rf manifest.json
+push_images
