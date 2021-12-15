@@ -16,7 +16,7 @@ metadata:
     app.kubernetes.io/instance: ibm-dba
     app.kubernetes.io/managed-by: ibm-dba
     app.kubernetes.io/name: ibm-dba
-    release: 21.0.2
+    release: 21.0.3
 spec:
   replicas: 1
   selector:
@@ -29,16 +29,16 @@ spec:
         app.kubernetes.io/instance: ibm-dba
         app.kubernetes.io/managed-by: ibm-dba
         app.kubernetes.io/name: ibm-dba
-        release: 21.0.2
+        release: 21.0.3
       annotations:
         productID: "5737-I23"
         productName: "IBM Cloud Pak for Business Automation"
-        productVersion: "21.0.2"
+        productVersion: "21.0.3"
         productChargedContainers: ""
         productMetric: "VIRTUAL_PROCESSOR_CORE"
         cloudpakId: "94a9c8c358bb43ba8fbdea62e7e166a5"
         cloudpakName: "IBM Cloud Pak for Business Automation"
-        cloudpakVersion: "21.0.2"
+        cloudpakVersion: "21.0.3"
     spec:
       hostNetwork: false
       hostPID: false
@@ -51,28 +51,30 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - key: beta.kubernetes.io/arch
+              - key: kubernetes.io/arch
                 operator: In
                 values:
                 - amd64
+                - s390x
           preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 3
             preference:
               matchExpressions:
-              - key: beta.kubernetes.io/arch
+              - key: kubernetes.io/arch
                 operator: In
                 values:
-                - "amd64"
+                - amd64
+                - s390x
       containers:
         - name: operator
           # Replace this with the built image name
-          image: "cp.stg.icr.io/cp/cp4a/icp4a-operator:21.0.2"
-          imagePullPolicy: "IfNotPresent"
+          image: cp.icr.io/cp/cp4a/icp4a-operator@sha256:8c88f9268d06d1f8f86b572cfd0a481758f13ea2fb67011a473a1cc4a99523ac
+          imagePullPolicy: Always
           securityContext:
             allowPrivilegeEscalation: false
             privileged: false
             readOnlyRootFilesystem: false
-            # Uncomment below for OCP 3.11 (Dropped in 4Q release)
+            # Uncomment below for OCP 3.11
             # runAsUser: 1001
             capabilities:
               drop:
@@ -89,13 +91,8 @@ spec:
             name: logs-backup
           - mountPath: /opt/ansible/share
             name: operator-shared-folder
-          - mountPath: /tmp/ansible-operator/runner
-            name: runner
           args:
-          - '--zap-time-encoding=iso8601'
           - '--zap-encoder=console'
-          - "--max-workers"
-          - "10"
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
@@ -110,10 +107,10 @@ spec:
             - name: WORKER_ICP4ACLUSTER_ICP4A_IBM_COM
               value: "10"
             - name: ANSIBLE_GATHERING
-              value: explicit
-            # MUST exist, used to accept ier license, valid value only can be "accept"
+              value: smart
+            # MUST exist, used to accept dba license, valid value only can be "accept"
             - name: ier_license
-              value: 
+              value: "accept"
       imagePullSecrets:
       - name: "admin.registrykey"
       volumes:
@@ -123,5 +120,3 @@ spec:
         - name: "operator-shared-folder"
           persistentVolumeClaim:
             claimName: "operator-shared-pvc"
-        - name: runner
-          emptyDir: {}

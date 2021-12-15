@@ -2,7 +2,7 @@
 #
 # Licensed Materials - Property of IBM
 #
-# (C) Copyright IBM Corp. 2019. All Rights Reserved.
+# (C) Copyright IBM Corp. 2021. All Rights Reserved.
 #
 # US Government Users Restricted Rights - Use, duplication or
 # disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
@@ -11,18 +11,19 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  creationTimestamp: null
   name: ibm-cp4a-operator
   labels:
     app.kubernetes.io/instance: ibm-dba
     app.kubernetes.io/managed-by: ibm-dba
     app.kubernetes.io/name: ibm-dba
-    release: 21.0.2
+    release: 21.0.3
 rules:
 - apiGroups:
   - ""
   resources:
   - pods
+  - pods/exec
+  - pods/log
   - services
   - endpoints
   - persistentvolumeclaims
@@ -30,9 +31,9 @@ rules:
   - configmaps
   - secrets
   - serviceaccounts
-  - securitycontextconstraints
   verbs:
   - '*'
+
 - apiGroups:
   - apps
   resources:
@@ -42,6 +43,7 @@ rules:
   - statefulsets
   verbs:
   - '*'
+
 - apiGroups:
   - monitoring.coreos.com
   resources:
@@ -49,6 +51,7 @@ rules:
   verbs:
   - get
   - create
+
 - apiGroups:
   - apps
   resourceNames:
@@ -57,25 +60,21 @@ rules:
   - deployments/finalizers
   verbs:
   - update
+
 - apiGroups:
   - icp4a.ibm.com
   resources:
   - '*'
   verbs:
   - '*'
-- apiGroups:
-  - ""
-  resources:
-  - pods/exec
-  - pods/log
-  verbs:
-  - '*'
+
 - apiGroups:
   - autoscaling
   resources:
   - horizontalpodautoscalers
   verbs:
   - '*'
+
 - apiGroups:
   - policy
   resources:
@@ -83,12 +82,15 @@ rules:
   - podsecuritypolicies
   verbs:
   - '*'
+
 - apiGroups:
   - networking.k8s.io
   resources:
   - networkpolicies
+  - ingresses
   verbs:
   - '*'
+
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
@@ -96,6 +98,7 @@ rules:
   - rolebindings
   verbs:
   - '*'
+
 - apiGroups:
   - batch
   resources:
@@ -104,25 +107,57 @@ rules:
   - deployments
   verbs:
   - '*'
+
 - apiGroups:
   - ""
   - route.openshift.io
   resources:
   - routes
-  verbs:
-  - '*'
-- apiGroups:
-  - ""
-  - route.openshift.io
-  resources:
   - routes/custom-host
   verbs:
   - '*'
+
 - apiGroups:
-  - "extensions"
+  - extensions
   resources:
-  - "ingresses"
-  - "jobs"
-  - "deployments"
+  - ingresses
+  - jobs
+  - deployments
+  - networkpolicies
+  - replicasets
   verbs:
   - "*"
+
+- apiGroups:
+  - core.automation.ibm.com
+  resources:
+  - cartridges
+  - automationuiconfigs
+  verbs:
+  - '*'
+
+- apiGroups:
+  - base.automation.ibm.com
+  resources:
+  - cartridgerequirements
+  - automationbases
+  verbs:
+  - '*'
+- apiGroups:
+  - eventprocessing.automation.ibm.com
+  resources:
+  - eventprocessors
+  verbs:
+  - '*'
+- apiGroups:
+  - insightsengine.automation.ibm.com
+  resources:
+  - insightsengines
+  verbs:
+  - '*'
+- apiGroups:
+  - certmanager.k8s.io
+  resources:
+  - issuers
+  verbs:
+  - '*'

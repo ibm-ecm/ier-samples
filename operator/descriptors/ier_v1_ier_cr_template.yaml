@@ -17,12 +17,12 @@ metadata:
     app.kubernetes.io/instance: ibm-dba
     app.kubernetes.io/managed-by: ibm-dba
     app.kubernetes.io/name: ibm-dba
-    release: 5.2.1.6
+    release: 5.2.1.7
 spec:
   ##########################################################################
   ## This section contains the shared configuration for all CP4A components #
   ##########################################################################
-  appVersion: 5.2.1.6
+  appVersion: 5.2.1.7
   ## MUST exist, used to accept ibm license, valid value only can be "accept"
   ibm_license: ""
   shared_configuration:
@@ -52,7 +52,7 @@ spec:
     ## The optional components are: cmis, es (External Share),tm (Task Manager) and ier (IBM Enterprise Records)
     sc_optional_components: ier
 
-    ## The deployment type as selected by the user.  Possible values are: demo, enterprise
+    ## The deployment type as selected by the user.  Possible values are: Starter and Production
     sc_deployment_type: Starter
 
     ## The platform to be deployed specified by the user.  Possible values are: OCP and other.  This is normally populated by the User script 
