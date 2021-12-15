@@ -1,4 +1,4 @@
-# Configuring IBM Enterprise Records 5.2.1.5
+# Configuring IBM Enterprise Records 5.2.1.7
 
 IBM Enterprise Records provides numerous containerized components for use in your container environment. The configuration settings for the components are recorded and stored in the shared YAML file for operator deployment. After you prepare your environment, you add the values for your configuration settings to the YAML so that the operator can deploy your containers to match your environment. 
 
