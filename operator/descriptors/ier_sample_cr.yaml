@@ -77,6 +77,7 @@ spec:
         repository: cp.icr.io/cp/cp4a/ier/ier
         tag: ga-521-ier-fp007
         pull_policy: IfNotPresent
+      ier_secret_name: ibm-ier-secret
      # Logging for workloads
       log:
         format: json
