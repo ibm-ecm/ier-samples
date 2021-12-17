@@ -64,10 +64,17 @@ spec:
       arch:
         amd64: "3 - Most preferred"
       replica_count: 2
+      # Optional: Use an existing certificate for automatic creation of OpenShift routes.
+     # Set this key if you have an external TLS certificate. Leave this empty if you don't have an external TLS certificate, operator will generate one for you.
+      ier_ext_tls_secret_name:
+     ## Optional. The Certificate Authority (CA) used to sign the external TLS secret for automatic creation of OpenShift routes.
+     ## Set this key if you have a CA to sign the external TLS certificate, leave this parameter empty if you don't have the CA of your external TLS certificate.
+      ier_auth_ca_secret_name:
       image:
         repository: cp.icr.io/cp/cp4a/ier/ier
         tag: ga-5216-ier-if001
         pull_policy: IfNotPresent
+      ier_secret_name: ibm-ier-secret
      # Logging for workloads
       log:
         format: json
