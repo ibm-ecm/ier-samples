@@ -22,7 +22,7 @@ spec:
   ## For example, serviceAccount in the spec becomes service_account in ansible.
   ## It is recommended that you perform some type validation in Ansible on the variables to ensure that
   ## your application is receiving expected input.
-  appVersion: 5.2.1.5.3
+  appVersion: 5.2.1.5.4
   ## MUST exist, used to accept ibm license, valid value only can be "accept"
   ibm_license: ""
   ## shared configuration among all tribe
@@ -65,6 +65,7 @@ spec:
         repository: cp.icr.io/cp/cp4a/ier/ier
         tag: ga-5215-ier-if004
         pull_policy: IfNotPresent
+      ier_secret_name: ibm-ier-secret
      # Logging for workloads
       log:
         format: json
