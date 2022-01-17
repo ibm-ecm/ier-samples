@@ -22,7 +22,7 @@ spec:
   ## For example, serviceAccount in the spec becomes service_account in ansible.
   ## It is recommended that you perform some type validation in Ansible on the variables to ensure that
   ## your application is receiving expected input.
-  appVersion: 5.2.1.7
+  appVersion: 21.0.3
   ## MUST exist, used to accept ibm license, valid value only can be "accept"
   ibm_license: ""
   ## shared configuration among all tribe
