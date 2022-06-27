@@ -16,13 +16,13 @@ metadata:
     app.kubernetes.io/instance: ibm-dba
     app.kubernetes.io/managed-by: ibm-dba
     app.kubernetes.io/name: ibm-dba
-    release: 5.2.1.7
+    release: 5.2.1.8
 spec:
   ## TIPS: The names of all variables in the spec field are converted to snake_case by the operator before running ansible
   ## For example, serviceAccount in the spec becomes service_account in ansible.
   ## It is recommended that you perform some type validation in Ansible on the variables to ensure that
   ## your application is receiving expected input.
-  appVersion: 21.0.3
+  appVersion: 22.0.1
   ## MUST exist, used to accept ibm license, valid value only can be "accept"
   ibm_license: ""
   ## shared configuration among all tribe
@@ -47,7 +47,7 @@ spec:
       sc_medium_file_storage_classname: "<Required>"
       sc_fast_file_storage_classname: "<Required>"
     image_pull_secrets:
-    - "admin.registrykey"
+    - ibm-entitlement-key
     ## This is the deployment type and the possible values are: user, non-production, and production.
     sc_deployment_license: User
     ## The deployment type as selected by the user.  Possible values are: Starter and Production
@@ -55,6 +55,8 @@ spec:
     ## The platform to be deployed specified by the user.  Possible values are: OCP, ROKS, and other.  This is normally populated by the User script
     ## based on input from the user.
     sc_deployment_platform:
+    ## Optional: You can specify a profile size for CloudPak - valid values are small,medium,large - default is small.
+    sc_deployment_profile_size: "small"
    
 
   ########################################################################
@@ -75,7 +77,7 @@ spec:
       
       image:
         repository: cp.icr.io/cp/cp4a/ier/ier
-        tag: ga-521-ier-fp007
+        tag: ga-521-ier-fp008
         pull_policy: IfNotPresent
       ier_secret_name: ibm-ier-secret
      # Logging for workloads
@@ -104,7 +106,9 @@ spec:
      # Specify an empty string if you don't have existing persistent volume claim.
       datavolume:
         existing_pvc_for_ier_instance: "ier-instance"
-        
+      storage:
+        storage_class: "<Required>"
+        size_for_logstore: 1Gi  
       probe:
         readiness:
           initial_delay_seconds: 120
