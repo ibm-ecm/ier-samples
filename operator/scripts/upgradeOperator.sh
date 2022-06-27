@@ -38,6 +38,7 @@ OLM_OPT_GROUP_TMP=${TEMP_FOLDER}/.operator_group.yaml
 OLM_SUBSCRIPTION_TMP=${TEMP_FOLDER}/.subscription.yaml
 LICENSE_FILE=${PARENT_DIR}/LICENSE
 LICENSE_ACCEPTED=""
+CATALOG_FOUND="Yes"
 
 function show_help {
     echo -e "\nPrerequisite:"
@@ -50,8 +51,8 @@ function show_help {
     echo "  -h  Display help"
     echo "  -n  The namespace to deploy Operator"
     echo "  -a  Accept IBM license"
-    echo "  -i  Optional: Operator image name, by default it is cp.icr.io/cp/cp4a/icp4a-operator:21.0.2"
-    echo -e "  -p  Optional: Pull secret to use to connect to the registry, by default it is admin.registrykey\n"
+    echo "  -i  Optional: Operator image name, by default it is cp.icr.io/cp/cp4a/icp4a-operator:22.0.1"
+    echo -e "  -p  Optional: Pull secret to use to connect to the registry, by default it is ibm-entitlement-key\n"
 
 }
 
@@ -132,16 +133,25 @@ function userInput() {
 
 function prepare_olm_install() {
     local maxRetry=20
-    project_name=$NAMESPACE
-
-    if oc get catalogsource -n openshift-marketplace | grep $online_source; then
-        echo "Found ibm operator catalog source"
+    project_name=$NAMESPACE    
+    
+    if [[ $CATALOG_FOUND == "Yes" ]]; then
+        if [[ $PINNED == "Yes" ]]; then
+          echo "Found ibm CP4BA operator catalog source, updating it ..."
+          oc apply -f $OLM_CATALOG
+          if [ $? -eq 0 ]; then
+            echo "IBM CP4BA Operator Catalog source Updated!"
+          else
+            echo "IBM CP4BA Operator catalog source update failed"
+            exit 1
+          fi          
+        fi
     else
         oc apply -f $OLM_CATALOG
         if [ $? -eq 0 ]; then
-          echo "IBM Operator Catalog source created!"
+          echo "IBM CP4BA Operator Catalog source created!"
         else
-          echo "Generic Operator catalog source creation failed"
+          echo "IBM CP4BA Operator catalog source creation failed"
           exit 1
         fi
     fi
@@ -181,16 +191,56 @@ function prepare_olm_install() {
     fi
 
     old_pod=$(oc get pods -n $NAMESPACE|grep ibm-cp4a-operator|awk '{print $1}'|head -n 1)
-    sed "s/REPLACE_NAMESPACE/$project_name/g" ${OLM_SUBSCRIPTION} > ${OLM_SUBSCRIPTION_TMP}
-    ${YQ_CMD} w -i ${OLM_SUBSCRIPTION_TMP} spec.source "$online_source"
-    oc apply -f ${OLM_SUBSCRIPTION_TMP} -n $NAMESPACE
-    # sed <"${OLM_SUBSCRIPTION}" "s|REPLACE_NAMESPACE|${project_name}|g; s|REPLACE_CHANNEL_NAME|stable|g" | oc apply -f -
-    if [ $? -eq 0 ]
-    then
-        echo "CP4BA Operator Subscription Created!"
+    if [[ $CATALOG_FOUND == "No" ]]; then
+      sed "s/REPLACE_NAMESPACE/$project_name/g" ${OLM_SUBSCRIPTION} > ${OLM_SUBSCRIPTION_TMP}
+      ${YQ_CMD} w -i ${OLM_SUBSCRIPTION_TMP} spec.source "$online_source"
+      oc apply -f ${OLM_SUBSCRIPTION_TMP} -n $NAMESPACE
+      # sed <"${OLM_SUBSCRIPTION}" "s|REPLACE_NAMESPACE|${project_name}|g; s|REPLACE_CHANNEL_NAME|stable|g" | oc apply -f -
+      if [ $? -eq 0 ]
+      then
+          echo "CP4BA Operator Subscription Created!"
+      else
+          echo "CP4BA Operator Subscription creation failed"
+          exit 1
+      fi
+    fi
+    if [[ $RUNTIME_MODE == "baw-dev" || $RUNTIME_MODE == "baw" ]];then
+      sub_inst_baw=$(oc get subscription -n $NAMESPACE|grep ibm-baw-operator|awk '{print $1}'|head -n 1)
+
+      if [ ! -z $sub_inst_baw ]; then
+        oc patch subscription ibm-baw-operator-catalog-subscription -n $NAMESPACE -p '{"spec":{"channel":"v22.1"}}' --type=merge
+        if [ $? -eq 0 ]
+        then
+            echo "Update the channel of BAW Standalone Operator Subscription to 22.1!"
+        else
+            echo "Failed to update the channel of BAW Standalone Operator Subscription to 22.1! exiting now..."
+            exit 1
+        fi
+      else
+          echo "No found BAW Standalone Operator Subscription! exiting now..."
+          exit 1      
+      fi
     else
-        echo "CP4BA Operator Subscription creation failed"
-        exit 1
+      sub_inst_list=$(oc get subscription -n $NAMESPACE|grep ibm-cp4a-|awk '{if(NR>0){if(NR==1){ arr=$1; }else{ arr=arr" "$1; }} } END{ print arr }')
+      sub_array=($sub_inst_list)
+      for i in ${!sub_array[@]}; do
+          if [[ ! -z "${sub_array[i]}" ]]; then
+            if [[ ${sub_array[i]} = ibm-cp4a-operator* || ${sub_array[i]} = ibm-cp4a-wfps-operator* ]]; then
+              oc patch subscription ${sub_array[i]} -n $NAMESPACE -p '{"spec":{"channel":"v22.1"}}' --type=merge >/dev/null 2>&1
+              if [ $? -eq 0 ]
+              then
+                  echo "Update the channel of subsciption '${sub_array[i]}' to 22.1!"
+                  printf "\n"
+              else
+                  echo "Failed to update the channel of subsciption '${sub_array[i]}' to 22.1! exiting now..."
+                  exit 1
+              fi
+            fi
+          else
+              echo "No found subsciption '${sub_array[i]}'! exiting now..."
+              exit 1      
+          fi
+      done
     fi
 
     for ((retry=0;retry<=${maxRetry};retry++)); do        
@@ -207,9 +257,6 @@ function prepare_olm_install() {
           echo -e "\x1B[1mPlease check the status of ReplicaSet by issue cmd:\x1B[0m"
           echo "oc describe rs $(oc get rs -n $project_name|grep ibm-cp4a-operator|awk '{print $1}') -n $project_name"
           printf "\n"
-          echo -e "\x1B[1mPlease check the status of PVC by issue cmd:\x1B[0m"
-          echo "oc describe pvc $(oc get pvc -n $project_name|grep operator-shared-pvc|awk '{print $1}') -n $project_name"
-          echo "oc describe pvc $(oc get pvc -n $project_name|grep cp4a-shared-log-pvc|awk '{print $1}') -n $project_name"
           exit 1
         else
           sleep 30
@@ -217,6 +264,30 @@ function prepare_olm_install() {
         fi
       else
         echo "CP4A operator is running $isReady"
+        break
+      fi
+    done
+    for ((retry=0;retry<=${maxRetry};retry++)); do        
+      echo "Waiting for CP4BA Content operator pod initialization"         
+       
+      isReady=$(oc get pod -n "$project_name" --no-headers | grep ibm-content-operator | grep "Running")
+      # new_pod=$(oc get pods -n $NAMESPACE|grep ibm-content-operator|awk '{print $1}'|head -n 1)
+      if [[ -z $isReady ]]; then
+        if [[ $retry -eq ${maxRetry} ]]; then 
+          echo "Timeout Waiting for CP4BA Content operator to start"
+          echo -e "\x1B[1mPlease check the status of Pod by issue cmd:\x1B[0m"
+          echo "oc describe pod $(oc get pod -n $project_name|grep ibm-content-operator|awk '{print $1}') -n $project_name"
+          printf "\n"
+          echo -e "\x1B[1mPlease check the status of ReplicaSet by issue cmd:\x1B[0m"
+          echo "oc describe rs $(oc get rs -n $project_name|grep ibm-content-operator|awk '{print $1}') -n $project_name"
+          printf "\n"
+          exit 1
+        else
+          sleep 30
+          continue
+        fi
+      else
+        echo "CP4A Content operator is running $isReady"
         break
       fi
     done
@@ -279,7 +350,7 @@ function cncf_install(){
   # Change the pullSecrets if needed
   if [ ! -z ${PULLSECRET} ]; then
       echo "Setting pullSecrets to $PULLSECRET"
-      sed -e "s|admin.registrykey|$PULLSECRET|g" ${CUR_DIR}/../upgradeOperator.yaml > ${CUR_DIR}/../upgradeOperatorsav.yaml ;  mv ${CUR_DIR}/../upgradeOperatorsav.yaml ${CUR_DIR}/../upgradeOperator.yaml
+      sed -e "s|ibm-entitlement-key|$PULLSECRET|g" ${CUR_DIR}/../upgradeOperator.yaml > ${CUR_DIR}/../upgradeOperatorsav.yaml ;  mv ${CUR_DIR}/../upgradeOperatorsav.yaml ${CUR_DIR}/../upgradeOperator.yaml
   else
       sed -e '/imagePullSecrets:/{N;d;}' ${CUR_DIR}/../upgradeOperator.yaml > ${CUR_DIR}/../upgradeOperatorsav.yaml ;  mv ${CUR_DIR}/../upgradeOperatorsav.yaml ${CUR_DIR}/../upgradeOperator.yaml
   fi
@@ -314,22 +385,64 @@ function cp4a_operator_uninstall(){
     done 
 }
 
-if [[ $RUNTIME_MODE == "dev" ]]; then
-    OLM_CATALOG=${PARENT_DIR}/descriptors/op-olm/cp4a_catalogsource.yaml
-    online_source="ibm-cp4a-operator-catalog"
-elif [[ $RUNTIME_MODE == "baw-dev" ]];then
-    OLM_CATALOG=${PARENT_DIR}/descriptors/baw-olm/cp4a_catalogsource.yaml
-    OLM_OPT_GROUP=${PARENT_DIR}/descriptors/baw-olm/operator_group.yaml
-    OLM_SUBSCRIPTION=${PARENT_DIR}/descriptors/baw-olm/devsubscription.yaml
-    online_source="ibm-baw-operator-catalog"
-elif [[ $RUNTIME_MODE == "baw" ]];then
-    OLM_CATALOG=${PARENT_DIR}/descriptors/baw-olm/catalog_source.yaml
-    OLM_OPT_GROUP=${PARENT_DIR}/descriptors/baw-olm/operator_group.yaml
-    OLM_SUBSCRIPTION=${PARENT_DIR}/descriptors/baw-olm/subscription.yaml
-    online_source="ibm-operator-catalog"
-else
-    OLM_CATALOG=${PARENT_DIR}/descriptors/op-olm/catalog_source.yaml
-    online_source="ibm-operator-catalog"
+# Check existing catalog source is pinned or non pinned
+if [[ -z $RUNTIME_MODE || $RUNTIME_MODE == "baw" ]]; then
+  if oc get catalogsource -n openshift-marketplace | grep ibm-operator-catalog; then
+    CATALOG_FOUND="Yes"
+    PINNED="No"
+  elif oc get catalogsource -n openshift-marketplace | grep ibm-cp4a-operator-catalog; then
+    CATALOG_FOUND="Yes"
+    PINNED="Yes"    
+  else
+    CATALOG_FOUND="No"
+    PINNED="Yes" # Fresh install use pinned catalog source
+  fi
+elif [[ $RUNTIME_MODE == "dev" || $RUNTIME_MODE == "baw-dev" ]]; then
+  if oc get catalogsource -n openshift-marketplace | grep ibm-cp4a-operator-catalog; then
+    CATALOG_FOUND="Yes"
+    PINNED="Yes"    
+  else
+    CATALOG_FOUND="No"
+    PINNED="Yes" # Fresh install use pinned catalog source
+  fi
+fi
+
+if [[ $PINNED == "Yes" ]];then
+  if [[ $RUNTIME_MODE == "dev" ]]; then
+      OLM_CATALOG=${PARENT_DIR}/descriptors/op-olm/cp4a_catalogsource_dev.yaml
+      online_source="ibm-cp4a-operator-catalog"
+  elif [[ $RUNTIME_MODE == "baw-dev" ]];then
+      OLM_CATALOG=${PARENT_DIR}/descriptors/baw-olm/cp4a_catalogsource_dev.yaml
+      OLM_OPT_GROUP=${PARENT_DIR}/descriptors/baw-olm/operator_group.yaml
+      OLM_SUBSCRIPTION=${PARENT_DIR}/descriptors/baw-olm/devsubscription.yaml
+      online_source="ibm-baw-operator-catalog"
+  elif [[ $RUNTIME_MODE == "baw" ]];then
+      OLM_CATALOG=${PARENT_DIR}/descriptors/baw-olm/catalog_source.yaml
+      OLM_OPT_GROUP=${PARENT_DIR}/descriptors/baw-olm/operator_group.yaml
+      OLM_SUBSCRIPTION=${PARENT_DIR}/descriptors/baw-olm/subscription.yaml
+      online_source="ibm-operator-catalog"
+  elif [[ -z $RUNTIME_MODE ]]; then
+      OLM_CATALOG=${PARENT_DIR}/descriptors/op-olm/catalog_source.yaml
+      online_source="ibm-cp4a-operator-catalog"
+  fi
+elif [[ $PINNED == "No" ]];then
+  if [[ $RUNTIME_MODE == "dev" ]]; then
+      OLM_CATALOG=${PARENT_DIR}/descriptors/op-olm/cp4a_catalogsource_dev.yaml
+      online_source="ibm-cp4a-operator-catalog"
+  elif [[ $RUNTIME_MODE == "baw-dev" ]];then
+      OLM_CATALOG=${PARENT_DIR}/descriptors/baw-olm/cp4a_catalogsource_dev.yaml
+      OLM_OPT_GROUP=${PARENT_DIR}/descriptors/baw-olm/operator_group.yaml
+      OLM_SUBSCRIPTION=${PARENT_DIR}/descriptors/baw-olm/devsubscription.yaml
+      online_source="ibm-baw-operator-catalog"
+  elif [[ $RUNTIME_MODE == "baw" ]];then
+      OLM_CATALOG=${PARENT_DIR}/descriptors/baw-olm/catalog_source.yaml
+      OLM_OPT_GROUP=${PARENT_DIR}/descriptors/baw-olm/operator_group.yaml
+      OLM_SUBSCRIPTION=${PARENT_DIR}/descriptors/baw-olm/subscription.yaml
+      online_source="ibm-operator-catalog"
+  elif [[ -z $RUNTIME_MODE ]]; then
+      OLM_CATALOG=${PARENT_DIR}/descriptors/op-olm/catalog_source.yaml
+      online_source="ibm-operator-catalog"
+  fi
 fi
 
 if [[ $LICENSE_ACCEPTED == "" ]]; then
@@ -338,17 +451,14 @@ if [[ $LICENSE_ACCEPTED == "" ]]; then
 fi
 
 if [[ $LICENSE_ACCEPTED == "accept" ]]; then
-  if [[ $(kubectl get pvc | grep cp4a-shared-log-pvc) == '' ]]; then
-      create_new_shared_logs_pvc
-  fi
   if [[ "$PLATFORM_SELECTED" == "OCP" || "$PLATFORM_SELECTED" == "ocp" || "$PLATFORM_SELECTED" == "ROKS" || "$PLATFORM_SELECTED" == "roks" ]]; then
     
     if [[ $RUNTIME_MODE == "baw" || $RUNTIME_MODE == "baw-dev" ]];then
       kubectl get subscription -n $NAMESPACE| grep ibm-baw-operator-catalog >/dev/null 2>&1
     else
-      kubectl get subscription -n $NAMESPACE| grep ibm-cp4a-operator-catalog-subscription >/dev/null 2>&1
+      kubectl get subscription -n $NAMESPACE| grep ibm-cp4a-operator-catalog >/dev/null 2>&1
     fi
-        
+
     returnValue=$?
     if [[ "$returnValue" == 1 ]] ; then
         uninstall_cp4a

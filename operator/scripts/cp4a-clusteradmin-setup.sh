@@ -3,7 +3,6 @@
 ###############################################################################
 #
 # Licensed Materials - Property of IBM
-#
 # (C) Copyright IBM Corp. 2021. All Rights Reserved.
 #
 # US Government Users Restricted Rights - Use, duplication or
@@ -33,15 +32,15 @@ PLATFORM_SELECTED=""
 PLATFORM_VERSION=""
 PROJ_NAME=""
 PROJ_NAME_ALL_NAMESPACE="openshift-operators"
-DOCKER_RES_SECRET_NAME="admin.registrykey"
+DOCKER_RES_SECRET_NAME="ibm-entitlement-key"
 REGISTRY_IN_FILE="cp.icr.io"
 OPERATOR_FILE=${PARENT_DIR}/descriptors/operator.yaml
 OPERATOR_FILE_TMP=$TEMP_FOLDER/.operator_tmp.yaml
 
-OPERATOR_PVC_FILE=${PARENT_DIR}/descriptors/operator-shared-pvc.yaml
-OPERATOR_PVC_FILE_TMP1=${TEMP_FOLDER}/.operator-shared-pvc_tmp1.yaml
-OPERATOR_PVC_FILE_TMP=${TEMP_FOLDER}/.operator-shared-pvc_tmp.yaml
-OPERATOR_PVC_FILE_BAK=${TEMP_FOLDER}/.operator-shared-pvc.yaml
+# OPERATOR_PVC_FILE=${PARENT_DIR}/descriptors/operator-shared-pvc.yaml
+# OPERATOR_PVC_FILE_TMP1=${TEMP_FOLDER}/.operator-shared-pvc_tmp1.yaml
+# OPERATOR_PVC_FILE_TMP=${TEMP_FOLDER}/.operator-shared-pvc_tmp.yaml
+# OPERATOR_PVC_FILE_BAK=${TEMP_FOLDER}/.operator-shared-pvc.yaml
 JDBC_DRIVER_DIR=${CUR_DIR}/jdbc
 
 COMMON_SERVICES_CRD_DIRECTORY_OCP311=${PARENT_DIR}/descriptors/common-services/scripts
@@ -51,14 +50,14 @@ COMMON_SERVICES_TEMP_DIR=$TMEP_FOLDER
 
 mkdir -p $TEMP_FOLDER >/dev/null 2>&1
 echo "creating temp folder"
-# During the development cycle we will need to apply cp4a_catalogsource.yaml
+# During the development cycle we will need to apply cp4a_catalogsource_dev.yaml
 # catalog_source.yaml is the final deliver yaml.
 if [[ $RUNTIME_MODE == "dev" ]];then
-    OLM_CATALOG=${PARENT_DIR}/descriptors/op-olm/cp4a_catalogsource.yaml
+    OLM_CATALOG=${PARENT_DIR}/descriptors/op-olm/cp4a_catalogsource_dev.yaml
     OLM_OPT_GROUP=${PARENT_DIR}/descriptors/op-olm/operator_group.yaml
     OLM_SUBSCRIPTION=${PARENT_DIR}/descriptors/op-olm/subscription.yaml
 elif [[ $RUNTIME_MODE == "baw-dev" ]];then
-    OLM_CATALOG=${PARENT_DIR}/descriptors/baw-olm/cp4a_catalogsource.yaml
+    OLM_CATALOG=${PARENT_DIR}/descriptors/baw-olm/cp4a_catalogsource_dev.yaml
     OLM_OPT_GROUP=${PARENT_DIR}/descriptors/baw-olm/operator_group.yaml
     OLM_SUBSCRIPTION=${PARENT_DIR}/descriptors/baw-olm/devsubscription.yaml
 elif [[ $RUNTIME_MODE == "baw" ]];then
@@ -75,8 +74,10 @@ if [[ $RUNTIME_MODE == "dev" ]]; then
     online_source="ibm-cp4a-operator-catalog"
 elif [[ $RUNTIME_MODE == "baw-dev" ]]; then
     online_source="ibm-baw-operator-catalog"
-else
+elif [[ $RUNTIME_MODE == "baw" ]]; then
     online_source="ibm-operator-catalog"
+else
+    online_source="ibm-cp4a-operator-catalog"
 fi
 
 OLM_CATALOG_TMP=${TEMP_FOLDER}/.catalog_source.yaml
@@ -350,18 +351,20 @@ function prepare_install() {
     echo -n "Creating ibm-cp4a-operator role binding ..."
     ${CLI_CMD} apply -f ${ROLE_BINDING_FILE} -n ${project_name} --validate=false >> ${LOG_FILE}
         echo "Done!"
-        if [[ "$PLATFORM_SELECTED" == "OCP" || "$PLATFORM_SELECTED" == "ROKS" ]]; then
-        echo
-        echo -ne Adding the user ${user_name} to the ibm-cp4a-operator role...
-        ${CLI_CMD} project ${project_name} >> ${LOG_FILE}
-        ${CLI_CMD} adm policy add-role-to-user edit ${user_name} >> ${LOG_FILE}
-        ${CLI_CMD} adm policy add-role-to-user registry-editor ${user_name} >> ${LOG_FILE}
-        ${CLI_CMD} adm policy add-role-to-user ibm-cp4a-operator ${user_name} >/dev/null 2>&1
-        ${CLI_CMD} adm policy add-role-to-user ibm-cp4a-operator ${user_name} >> ${LOG_FILE}
-        if [[ "$DEPLOYMENT_TYPE" == "starter" ]];then
-            ${CLI_CMD} adm policy add-cluster-role-to-user ibm-cp4a-operator ${user_name} >> ${LOG_FILE}
+        if [[ $NON_ADMIN == "false" && $user_name != "Cluster Admin" ]]; then
+            if [[ "$PLATFORM_SELECTED" == "OCP" || "$PLATFORM_SELECTED" == "ROKS" ]]; then
+            echo
+            echo -ne Adding the user ${user_name} to the ibm-cp4a-operator role...
+            ${CLI_CMD} project ${project_name} >> ${LOG_FILE}
+            ${CLI_CMD} adm policy add-role-to-user edit ${user_name} >> ${LOG_FILE}
+            ${CLI_CMD} adm policy add-role-to-user registry-editor ${user_name} >> ${LOG_FILE}
+            ${CLI_CMD} adm policy add-role-to-user ibm-cp4a-operator ${user_name} >/dev/null 2>&1
+            ${CLI_CMD} adm policy add-role-to-user ibm-cp4a-operator ${user_name} >> ${LOG_FILE}
+            if [[ "$DEPLOYMENT_TYPE" == "starter" ]];then
+                ${CLI_CMD} adm policy add-cluster-role-to-user ibm-cp4a-operator ${user_name} >> ${LOG_FILE}
+            fi
+            echo "Done!"
         fi
-        echo "Done!"
     fi
     echo
     echo -ne Label the default namespace to allow network policies to open traffic to the ingress controller using a namespaceSelector...
@@ -380,6 +383,7 @@ function apply_cp4a_operator(){
     # set db2_license
     ${SED_COMMAND} '/baw_license/{n;s/value:.*/value: accept/;}' ${OPERATOR_FILE_TMP}
     # Set operator image pull secret
+    ${SED_COMMAND} "s|ibm-entitlement-key|$DOCKER_RES_SECRET_NAME|g" ${OPERATOR_FILE_TMP}
     ${SED_COMMAND} "s|admin.registrykey|$DOCKER_RES_SECRET_NAME|g" ${OPERATOR_FILE_TMP}
     # Set operator image registry
     new_operator="$REGISTRY_IN_FILE\/cp\/cp4a"
@@ -489,6 +493,12 @@ function prepare_olm_install() {
 
     sed "s/REPLACE_NAMESPACE/$temp_project_name/g" ${OLM_SUBSCRIPTION} > ${OLM_SUBSCRIPTION_TMP}
     ${YQ_CMD} w -i ${OLM_SUBSCRIPTION_TMP} spec.source "$online_source"
+    
+    # When upgrade to 22.0.1 major release for CP4BA, always set installPlanApproval to Manual whatever starter or production mode
+    # The policy is Automatic for dev mode
+    # if [[ !($RUNTIME_MODE == "baw" || $RUNTIME_MODE == "baw-dev" || $RUNTIME_MODE == "dev") ]]; then
+    #     ${YQ_CMD} w -i ${OLM_SUBSCRIPTION_TMP} spec.installPlanApproval "Manual"
+    # fi
     ${CLI_CMD} apply -f ${OLM_SUBSCRIPTION_TMP}
     # sed <"${OLM_SUBSCRIPTION}" "s|REPLACE_NAMESPACE|${project_name}|g; s|REPLACE_CHANNEL_NAME|stable|g" | oc apply -f -
     if [ $? -eq 0 ]
@@ -499,6 +509,7 @@ function prepare_olm_install() {
         exit 1
     fi
 
+   printf "\n"
    for ((retry=0;retry<=${maxRetry};retry++)); do        
       echo "Waiting for CP4BA operator pod initialization"         
        
@@ -511,10 +522,10 @@ function prepare_olm_install() {
           printf "\n"
           echo -e "\x1B[1mPlease check the status of ReplicaSet by issue cmd:\x1B[0m"
           echo "oc describe rs $(oc get rs -n $temp_project_name|grep ibm-cp4a-operator|awk '{print $1}') -n $temp_project_name"
-          printf "\n"
-          echo -e "\x1B[1mPlease check the status of PVC by issue cmd:\x1B[0m"
-          echo "oc describe pvc $(oc get pvc -n $temp_project_name|grep operator-shared-pvc|awk '{print $1}') -n $temp_project_name"
-          echo "oc describe pvc $(oc get pvc -n $temp_project_name|grep cp4a-shared-log-pvc|awk '{print $1}') -n $temp_project_name"
+        #   printf "\n"
+        #   echo -e "\x1B[1mPlease check the status of PVC by issue cmd:\x1B[0m"
+        #   echo "oc describe pvc $(oc get pvc -n $temp_project_name|grep operator-shared-pvc|awk '{print $1}') -n $temp_project_name"
+        #   echo "oc describe pvc $(oc get pvc -n $temp_project_name|grep cp4a-shared-log-pvc|awk '{print $1}') -n $temp_project_name"
           exit 1
         else
           sleep 30
@@ -522,39 +533,72 @@ function prepare_olm_install() {
         fi
       else
         echo "CP4A operator is running $isReady"
-        if [[ "$DEPLOYMENT_TYPE" == "production" && "$RUNTIME_MODE" == "dev" ]]; then
-            copy_jdbc_driver
+        # if [[ "$DEPLOYMENT_TYPE" == "production" && "$RUNTIME_MODE" == "dev" ]]; then
+        #     copy_jdbc_driver
+        # fi
+        break
+      fi
+    done
+
+   printf "\n"
+   for ((retry=0;retry<=${maxRetry};retry++)); do     
+      echo "Waiting for CP4BA Content operator pod initialization"         
+       
+      isReady=$(${CLI_CMD} get pod -n "$temp_project_name" --no-headers | grep ibm-content-operator | grep "Running")
+      if [[ -z $isReady ]]; then
+        if [[ $retry -eq ${maxRetry} ]]; then 
+          echo "Timeout Waiting for CP4BA Content operator to start"
+          echo -e "\x1B[1mPlease check the status of Pod by issue cmd:\x1B[0m"
+          echo "oc describe pod $(oc get pod -n $temp_project_name|grep ibm-content-operator|awk '{print $1}') -n $temp_project_name"
+          printf "\n"
+          echo -e "\x1B[1mPlease check the status of ReplicaSet by issue cmd:\x1B[0m"
+          echo "oc describe rs $(oc get rs -n $temp_project_name|grep ibm-content-operator|awk '{print $1}') -n $temp_project_name"
+        #   printf "\n"
+        #   echo -e "\x1B[1mPlease check the status of PVC by issue cmd:\x1B[0m"
+        #   echo "oc describe pvc $(oc get pvc -n $temp_project_name|grep operator-shared-pvc|awk '{print $1}') -n $temp_project_name"
+        #   echo "oc describe pvc $(oc get pvc -n $temp_project_name|grep cp4a-shared-log-pvc|awk '{print $1}') -n $temp_project_name"
+          exit 1
+        else
+          sleep 30
+          continue
         fi
+      else
+        echo "CP4A Content operator is running $isReady"
+        # if [[ "$DEPLOYMENT_TYPE" == "production" && "$RUNTIME_MODE" == "dev" ]]; then
+        #     copy_jdbc_driver
+        # fi
         break
       fi
     done
 
     echo
-    echo -ne Adding the user ${user_name} to the ibm-cp4a-operator role...
-    if [[ $RUNTIME_MODE == "baw" || $RUNTIME_MODE == "baw-dev" ]]; then
-        role_name_olm=$(${CLI_CMD} get role -n "$temp_project_name" --no-headers|grep ibm-baw-operator.v|awk '{print $1}')
-    else
-        role_name_olm=$(${CLI_CMD} get role -n "$temp_project_name" --no-headers|grep ibm-cp4a-operator.v|awk '{print $1}')
-    fi
-    if [[ -z $role_name_olm ]]; then
-        echo "No role found for CP4BA operator"
-        exit 1     
-    else
-        ${CLI_CMD} project ${temp_project_name} >> ${LOG_FILE}
-        ${CLI_CMD} adm policy add-role-to-user edit ${user_name} >> ${LOG_FILE}
-        ${CLI_CMD} adm policy add-role-to-user registry-editor ${user_name} >> ${LOG_FILE}
-        ${CLI_CMD} adm policy add-role-to-user $role_name_olm ${user_name} >/dev/null 2>&1
-        ${CLI_CMD} adm policy add-role-to-user $role_name_olm ${user_name} >> ${LOG_FILE}
-        if [[ "$DEPLOYMENT_TYPE" == "starter" ]];then
-            cluster_role_name_olm=$(${CLI_CMD} get clusterrole|grep ibm-cp4a-operator.v|sort -t"t" -k1r|awk 'NR==1{print $1}')
-            if [[ -z $cluster_role_name_olm ]]; then
-                echo "No cluster role found for CP4BA operator"
-                exit 1     
-            else
-                ${CLI_CMD} adm policy add-cluster-role-to-user $cluster_role_name_olm ${user_name} >> ${LOG_FILE}
-            fi
+    if [[ $NON_ADMIN == "false" && $user_name != "Cluster Admin" ]]; then
+        echo -ne Adding the user ${user_name} to the ibm-cp4a-operator role...
+        if [[ $RUNTIME_MODE == "baw" || $RUNTIME_MODE == "baw-dev" ]]; then
+            role_name_olm=$(${CLI_CMD} get role -n "$temp_project_name" --no-headers|grep ibm-baw-operator.v|awk '{print $1}')
+        else
+            role_name_olm=$(${CLI_CMD} get role -n "$temp_project_name" --no-headers|grep ibm-cp4a-operator.v|awk '{print $1}')
         fi
-        echo "Done!"
+        if [[ -z $role_name_olm ]]; then
+            echo "No role found for CP4BA operator"
+            exit 1     
+        else
+            ${CLI_CMD} project ${temp_project_name} >> ${LOG_FILE}
+            ${CLI_CMD} adm policy add-role-to-user edit ${user_name} >> ${LOG_FILE}
+            ${CLI_CMD} adm policy add-role-to-user registry-editor ${user_name} >> ${LOG_FILE}
+            ${CLI_CMD} adm policy add-role-to-user $role_name_olm ${user_name} >/dev/null 2>&1
+            ${CLI_CMD} adm policy add-role-to-user $role_name_olm ${user_name} >> ${LOG_FILE}
+            if [[ "$DEPLOYMENT_TYPE" == "starter" ]];then
+                cluster_role_name_olm=$(${CLI_CMD} get clusterrole|grep ibm-cp4a-operator.v|sort -t"t" -k1r|awk 'NR==1{print $1}')
+                if [[ -z $cluster_role_name_olm ]]; then
+                    echo "No cluster role found for CP4BA operator"
+                    exit 1     
+                else
+                    ${CLI_CMD} adm policy add-cluster-role-to-user $cluster_role_name_olm ${user_name} >> ${LOG_FILE}
+                fi
+            fi
+            echo "Done!"
+        fi
     fi
     echo
     echo -ne Label the default namespace to allow network policies to open traffic to the ingress controller using a namespaceSelector...
@@ -727,18 +771,6 @@ function create_secret_entitlement_registry(){
     else
         echo -e "\x1B[1mFailed\x1B[0m"
     fi
-     # as for baw standalone, need drop IAF
-    if [[ "$RUNTIME_MODE" != "baw" && $RUNTIME_MODE != "baw-dev" ]] ; then
-      printf "\x1B[1mCreating ibm-entitlement-key secret for IAF in project $project_name...\n\x1B[0m"  
-
-      ${CLI_CMD} delete secret ibm-entitlement-key -n "${project_name}" >/dev/null 2>&1
-      CREATE_SECRET_CMD="${CLI_CMD} create secret docker-registry ibm-entitlement-key --docker-server=$DOCKER_REG_SERVER --docker-username=$DOCKER_REG_USER --docker-password=$DOCKER_REG_KEY --docker-email=ecmtest@ibm.com -n $project_name"
-      if $CREATE_SECRET_CMD ; then
-         echo -e "\x1B[1mDone\x1B[0m"
-      else
-         echo -e "\x1B[1mFailed\x1B[0m"
-     fi
-    fi
 
     if [[ "${ALL_NAMESPACE}" == "Yes" ]]; then
         # Create docker-registry secret for Entitlement Registry Key in openshift-operators
@@ -749,19 +781,7 @@ function create_secret_entitlement_registry(){
             echo -e "\x1B[1mDone\x1B[0m"
         else
             echo -e "\x1B[1mFailed\x1B[0m"
-        fi
-        # as for baw standalone, need drop IAF
-        if [[ "$RUNTIME_MODE" != "baw" && $RUNTIME_MODE != "baw-dev" ]] ; then
-          printf "\x1B[1mCreating ibm-entitlement-key secret for IAF in project $PROJ_NAME_ALL_NAMESPACE...\n\x1B[0m"  
-
-          ${CLI_CMD} delete secret ibm-entitlement-key -n "${PROJ_NAME_ALL_NAMESPACE}" >/dev/null 2>&1
-          CREATE_SECRET_CMD="${CLI_CMD} create secret docker-registry ibm-entitlement-key --docker-server=$DOCKER_REG_SERVER --docker-username=$DOCKER_REG_USER --docker-password=$DOCKER_REG_KEY --docker-email=ecmtest@ibm.com -n $PROJ_NAME_ALL_NAMESPACE"
-          if $CREATE_SECRET_CMD ; then
-              echo -e "\x1B[1mDone\x1B[0m"
-          else
-              echo -e "\x1B[1mFailed\x1B[0m"
-          fi
-        fi          
+        fi         
     fi
 }
 
@@ -771,150 +791,150 @@ function get_storage_class_name(){
     fi
     check_storage_class
     # For dynamic storage classname
-    storage_class_name=""
-    sc_slow_file_storage_classname=""
-    sc_medium_file_storage_classname=""
-    sc_fast_file_storage_classname=""
-    printf "\n"
-    if [[ $PLATFORM_SELECTED == "OCP" || $PLATFORM_SELECTED == "other" ]] ;
-    then
-        printf "\x1B[1mTo provision the persistent volumes and volume claims\n\x1B[0m"
+    # storage_class_name=""
+    # sc_slow_file_storage_classname=""
+    # sc_medium_file_storage_classname=""
+    # sc_fast_file_storage_classname=""
+    # printf "\n"
+    # if [[ $PLATFORM_SELECTED == "OCP" || $PLATFORM_SELECTED == "other" ]] ;
+    # then
+    #     printf "\x1B[1mTo provision the persistent volumes and volume claims\n\x1B[0m"
 
-        while [[ $storage_class_name == "" ]]
-        do
-            if [ -z "$CP4BA_AUTO_STORAGE_CLASS_OCP" ]; then
-                printf "\x1B[1mplease enter the dynamic storage classname: \x1B[0m"
-                read -rp "" storage_class_name
-            else
-                printf "\x1B[1mplease enter the dynamic storage classname: \x1B[0m$CP4BA_AUTO_STORAGE_CLASS_OCP\n"
-                storage_class_name=$CP4BA_AUTO_STORAGE_CLASS_OCP
-            fi
-            if [ -z "$storage_class_name" ]; then
-               echo -e "\x1B[1;31mEnter a valid dynamic storage classname\x1B[0m"
-            else
-                verify_sc "$storage_class_name"
-                retVal=$?
-                if [ $retVal -ne 0 ]; then
-                    echo -e "\"${CP4BA_AUTO_STORAGE_CLASS_OCP}\"\x1B[1;31m is NOT a valid dynamic storage classname\x1B[0m"
-                    if [ -z "$CP4BA_AUTO_STORAGE_CLASS_OCP" ]; then
-                        storage_class_name=""
-                    else
-                        echo -e "Exiting..."
-                        exit 1
-                    fi
-                fi
-            fi
-        done
-    elif [[ $PLATFORM_SELECTED == "ROKS" ]]
-    then
-        printf "\x1B[1mTo provision the persistent volumes and volume claims\n\x1B[0m"
+    #     while [[ $storage_class_name == "" ]]
+    #     do
+    #         if [ -z "$CP4BA_AUTO_STORAGE_CLASS_OCP" ]; then
+    #             printf "\x1B[1mplease enter the dynamic storage classname: \x1B[0m"
+    #             read -rp "" storage_class_name
+    #         else
+    #             printf "\x1B[1mplease enter the dynamic storage classname: \x1B[0m$CP4BA_AUTO_STORAGE_CLASS_OCP\n"
+    #             storage_class_name=$CP4BA_AUTO_STORAGE_CLASS_OCP
+    #         fi
+    #         if [ -z "$storage_class_name" ]; then
+    #            echo -e "\x1B[1;31mEnter a valid dynamic storage classname\x1B[0m"
+    #         else
+    #             verify_sc "$storage_class_name"
+    #             retVal=$?
+    #             if [ $retVal -ne 0 ]; then
+    #                 echo -e "\"${CP4BA_AUTO_STORAGE_CLASS_OCP}\"\x1B[1;31m is NOT a valid dynamic storage classname\x1B[0m"
+    #                 if [ -z "$CP4BA_AUTO_STORAGE_CLASS_OCP" ]; then
+    #                     storage_class_name=""
+    #                 else
+    #                     echo -e "Exiting..."
+    #                     exit 1
+    #                 fi
+    #             fi
+    #         fi
+    #     done
+    # elif [[ $PLATFORM_SELECTED == "ROKS" ]]
+    # then
+    #     printf "\x1B[1mTo provision the persistent volumes and volume claims\n\x1B[0m"
 
-        while [[ $sc_fast_file_storage_classname == "" ]] # While get fast storage clase name
-        do
-            if [ -z "$CP4BA_AUTO_STORAGE_CLASS_FAST_ROKS" ]; then
-                printf "\x1B[1mplease enter the dynamic storage classname for fast storage: \x1B[0m"
-                read -rp "" sc_fast_file_storage_classname
-            else
-                printf "\x1B[1mplease enter the dynamic storage classname for fast storage: \x1B[0m$CP4BA_AUTO_STORAGE_CLASS_FAST_ROKS\n"
-                sc_fast_file_storage_classname=$CP4BA_AUTO_STORAGE_CLASS_FAST_ROKS
-            fi
-            if [ -z "$sc_fast_file_storage_classname" ]; then
-               echo -e "\x1B[1;31mEnter a valid dynamic storage classname\x1B[0m"
-            else
-                verify_sc "$sc_fast_file_storage_classname"
-                retVal=$?
-                if [ $retVal -ne 0 ]; then
-                    echo -e "\"${CP4BA_AUTO_STORAGE_CLASS_FAST_ROKS}\"\x1B[1;31m is NOT a valid dynamic storage classname\x1B[0m"
-                    if [ -z "$CP4BA_AUTO_STORAGE_CLASS_FAST_ROKS" ]; then
-                        sc_fast_file_storage_classname=""
-                    else
-                        echo -e "Exiting..."
-                        exit 1
-                    fi
-                fi             
-            fi
-        done
-    fi
-    STORAGE_CLASS_NAME=${storage_class_name}
-    SLOW_STORAGE_CLASS_NAME=${sc_fast_file_storage_classname}
-    MEDIUM_STORAGE_CLASS_NAME=${sc_fast_file_storage_classname}
-    FAST_STORAGE_CLASS_NAME=${sc_fast_file_storage_classname}
+    #     while [[ $sc_fast_file_storage_classname == "" ]] # While get fast storage clase name
+    #     do
+    #         if [ -z "$CP4BA_AUTO_STORAGE_CLASS_FAST_ROKS" ]; then
+    #             printf "\x1B[1mplease enter the dynamic storage classname for fast storage: \x1B[0m"
+    #             read -rp "" sc_fast_file_storage_classname
+    #         else
+    #             printf "\x1B[1mplease enter the dynamic storage classname for fast storage: \x1B[0m$CP4BA_AUTO_STORAGE_CLASS_FAST_ROKS\n"
+    #             sc_fast_file_storage_classname=$CP4BA_AUTO_STORAGE_CLASS_FAST_ROKS
+    #         fi
+    #         if [ -z "$sc_fast_file_storage_classname" ]; then
+    #            echo -e "\x1B[1;31mEnter a valid dynamic storage classname\x1B[0m"
+    #         else
+    #             verify_sc "$sc_fast_file_storage_classname"
+    #             retVal=$?
+    #             if [ $retVal -ne 0 ]; then
+    #                 echo -e "\"${CP4BA_AUTO_STORAGE_CLASS_FAST_ROKS}\"\x1B[1;31m is NOT a valid dynamic storage classname\x1B[0m"
+    #                 if [ -z "$CP4BA_AUTO_STORAGE_CLASS_FAST_ROKS" ]; then
+    #                     sc_fast_file_storage_classname=""
+    #                 else
+    #                     echo -e "Exiting..."
+    #                     exit 1
+    #                 fi
+    #             fi             
+    #         fi
+    #     done
+    # fi
+    # STORAGE_CLASS_NAME=${storage_class_name}
+    # SLOW_STORAGE_CLASS_NAME=${sc_fast_file_storage_classname}
+    # MEDIUM_STORAGE_CLASS_NAME=${sc_fast_file_storage_classname}
+    # FAST_STORAGE_CLASS_NAME=${sc_fast_file_storage_classname}
 }
 
 
-function copy_jdbc_driver(){
-    local temp_project_name=""
+# function copy_jdbc_driver(){
+#     local temp_project_name=""
 
-    if [[ $ALL_NAMESPACE == "Yes" ]]; then
-        temp_project_name=$PROJ_NAME_ALL_NAMESPACE
-    else
-        temp_project_name=$project_name
-    fi
-    # Get pod name
-    echo -e "\x1B[1mCopying the JDBC driver for the operator...\x1B[0m"
-    operator_podname=$(${CLI_CMD} get pod -n $temp_project_name|grep ibm-cp4a-operator|grep Running|awk '{print $1}')
+#     if [[ $ALL_NAMESPACE == "Yes" ]]; then
+#         temp_project_name=$PROJ_NAME_ALL_NAMESPACE
+#     else
+#         temp_project_name=$project_name
+#     fi
+#     # Get pod name
+#     echo -e "\x1B[1mCopying the JDBC driver for the operator...\x1B[0m"
+#     operator_podname=$(${CLI_CMD} get pod -n $temp_project_name|grep ibm-cp4a-operator|grep Running|awk '{print $1}')
 
-    # ${CLI_CMD} exec -it ${operator_podname} -- rm -rf /opt/ansible/share/jdbc
-    COPY_JDBC_CMD="${CLI_CMD} cp ${JDBC_DRIVER_DIR} ${operator_podname}:/opt/ansible/share/ -n $temp_project_name"
+#     # ${CLI_CMD} exec -it ${operator_podname} -- rm -rf /opt/ansible/share/jdbc
+#     COPY_JDBC_CMD="${CLI_CMD} cp ${JDBC_DRIVER_DIR} ${operator_podname}:/opt/ansible/share/ -n $temp_project_name"
 
-    if $COPY_JDBC_CMD ; then
-        echo -e "\x1B[1mDone\x1B[0m"
-    else
-        echo -e "\x1B[1;31mFailed\x1B[0m"
-    fi
-}
+#     if $COPY_JDBC_CMD ; then
+#         echo -e "\x1B[1mDone\x1B[0m"
+#     else
+#         echo -e "\x1B[1;31mFailed\x1B[0m"
+#     fi
+# }
 
-function allocate_operator_pvc_olm_or_cncf(){
-    # For dynamic storage classname
-    printf "\n"
-    if [[ $PLATFORM_SELECTED == "OCP" || $PLATFORM_SELECTED == "other" ]]; then
-        echo -e "\x1B[1mApplying the persistent volumes for the Cloud Pak operator by using the storage classname: ${STORAGE_CLASS_NAME}...\x1B[0m"
-        ${COPY_CMD} -rf "${OPERATOR_PVC_FILE}" "${OPERATOR_PVC_FILE_BAK}"
-        printf "\n"
-        sed "s/<StorageClassName>/$STORAGE_CLASS_NAME/g" ${OPERATOR_PVC_FILE_BAK} > ${OPERATOR_PVC_FILE_TMP1}
-        sed "s/<Fast_StorageClassName>/$STORAGE_CLASS_NAME/g" ${OPERATOR_PVC_FILE_TMP1}  > ${OPERATOR_PVC_FILE_TMP} # &> /dev/null
-    else
-        echo -e "\x1B[1mApplying the persistent volumes for the Cloud Pak operator by using the storage classname: ${FAST_STORAGE_CLASS_NAME}...\x1B[0m"
-        ${COPY_CMD} -rf "${OPERATOR_PVC_FILE}" "${OPERATOR_PVC_FILE_BAK}"
-        printf "\n"
-        sed "s/<StorageClassName>/$FAST_STORAGE_CLASS_NAME/g" ${OPERATOR_PVC_FILE_BAK} > ${OPERATOR_PVC_FILE_TMP1}
-        sed "s/<Fast_StorageClassName>/$FAST_STORAGE_CLASS_NAME/g" ${OPERATOR_PVC_FILE_TMP1}  > ${OPERATOR_PVC_FILE_TMP} # &> /dev/null    
-    fi
-    # ${COPY_CMD} -rf ${OPERATOR_PVC_FILE_TMP} ${OPERATOR_PVC_FILE_BAK}
-    # Create Operator Persistent Volume.
-    local temp_project_name=""
+# function allocate_operator_pvc_olm_or_cncf(){
+#     # For dynamic storage classname
+#     printf "\n"
+#     if [[ $PLATFORM_SELECTED == "OCP" || $PLATFORM_SELECTED == "other" ]]; then
+#         echo -e "\x1B[1mApplying the persistent volumes for the Cloud Pak operator by using the storage classname: ${STORAGE_CLASS_NAME}...\x1B[0m"
+#         ${COPY_CMD} -rf "${OPERATOR_PVC_FILE}" "${OPERATOR_PVC_FILE_BAK}"
+#         printf "\n"
+#         sed "s/<StorageClassName>/$STORAGE_CLASS_NAME/g" ${OPERATOR_PVC_FILE_BAK} > ${OPERATOR_PVC_FILE_TMP1}
+#         sed "s/<Fast_StorageClassName>/$STORAGE_CLASS_NAME/g" ${OPERATOR_PVC_FILE_TMP1}  > ${OPERATOR_PVC_FILE_TMP} # &> /dev/null
+#     else
+#         echo -e "\x1B[1mApplying the persistent volumes for the Cloud Pak operator by using the storage classname: ${FAST_STORAGE_CLASS_NAME}...\x1B[0m"
+#         ${COPY_CMD} -rf "${OPERATOR_PVC_FILE}" "${OPERATOR_PVC_FILE_BAK}"
+#         printf "\n"
+#         sed "s/<StorageClassName>/$FAST_STORAGE_CLASS_NAME/g" ${OPERATOR_PVC_FILE_BAK} > ${OPERATOR_PVC_FILE_TMP1}
+#         sed "s/<Fast_StorageClassName>/$FAST_STORAGE_CLASS_NAME/g" ${OPERATOR_PVC_FILE_TMP1}  > ${OPERATOR_PVC_FILE_TMP} # &> /dev/null    
+#     fi
+#     # ${COPY_CMD} -rf ${OPERATOR_PVC_FILE_TMP} ${OPERATOR_PVC_FILE_BAK}
+#     # Create Operator Persistent Volume.
+#     local temp_project_name=""
 
-    if [[ $ALL_NAMESPACE == "Yes" ]]; then
-        temp_project_name=$PROJ_NAME_ALL_NAMESPACE
-    else
-        temp_project_name=$project_name
-    fi
+#     if [[ $ALL_NAMESPACE == "Yes" ]]; then
+#         temp_project_name=$PROJ_NAME_ALL_NAMESPACE
+#     else
+#         temp_project_name=$project_name
+#     fi
 
-    CREATE_PVC_CMD="${CLI_CMD} apply -f ${OPERATOR_PVC_FILE_TMP} -n $temp_project_name"
-    if $CREATE_PVC_CMD ; then
-        echo -e "\x1B[1mDone\x1B[0m"
-    else
-        echo -e "\x1B[1;31mFailed\x1B[0m"
-    fi
-   # Check Operator Persistent Volume status every 5 seconds (max 10 minutes) until allocate.
-    ATTEMPTS=0
-    TIMEOUT=60
-    printf "\n"
-    echo -e "\x1B[1mWaiting for the persistent volumes to be ready...\x1B[0m"
-    until ${CLI_CMD} get pvc -n $temp_project_name| grep cp4a-shared-log-pvc| grep -q -m 1 "Bound" || [ $ATTEMPTS -eq $TIMEOUT ]; do
-        ATTEMPTS=$((ATTEMPTS + 1))
-        echo -e "......"
-        sleep 10
-        if [ $ATTEMPTS -eq $TIMEOUT ] ; then
-            echo -e "\x1B[1;31mFailed to allocate the persistent volumes!\x1B[0m"
-            echo -e "\x1B[1;31mRun the following command to check the claim '${CLI_CMD} describe pvc operator-shared-pvc'\x1B[0m"
-            exit 1
-        fi
-    done
-    if [ $ATTEMPTS -lt $TIMEOUT ] ; then
-            echo -e "\x1B[1mDone\x1B[0m"
-    fi
-}
+#     # CREATE_PVC_CMD="${CLI_CMD} apply -f ${OPERATOR_PVC_FILE_TMP} -n $temp_project_name"
+#     # if $CREATE_PVC_CMD ; then
+#     #     echo -e "\x1B[1mDone\x1B[0m"
+#     # else
+#     #     echo -e "\x1B[1;31mFailed\x1B[0m"
+#     # fi
+#    # Check Operator Persistent Volume status every 5 seconds (max 10 minutes) until allocate.
+#     ATTEMPTS=0
+#     TIMEOUT=60
+#     printf "\n"
+#     echo -e "\x1B[1mWaiting for the persistent volumes to be ready...\x1B[0m"
+#     until ${CLI_CMD} get pvc -n $temp_project_name| grep cp4a-shared-log-pvc| grep -q -m 1 "Bound" || [ $ATTEMPTS -eq $TIMEOUT ]; do
+#         ATTEMPTS=$((ATTEMPTS + 1))
+#         echo -e "......"
+#         sleep 10
+#         if [ $ATTEMPTS -eq $TIMEOUT ] ; then
+#             echo -e "\x1B[1;31mFailed to allocate the persistent volumes!\x1B[0m"
+#             echo -e "\x1B[1;31mRun the following command to check the claim '${CLI_CMD} describe pvc operator-shared-pvc'\x1B[0m"
+#             exit 1
+#         fi
+#     done
+#     if [ $ATTEMPTS -lt $TIMEOUT ] ; then
+#             echo -e "\x1B[1mDone\x1B[0m"
+#     fi
+# }
 
 function display_storage_classes() {
     echo
@@ -1019,8 +1039,14 @@ function select_deployment_type(){
                 esac
             done    
         else
-            options=("Starter" "Production")
-            PS3='Enter a valid option [1 to 2]: '
+            if [[ "$RUNTIME_MODE" == "baw" || $RUNTIME_MODE == "baw-dev" ]]
+            then
+              options=("Production")
+              PS3='Enter a valid option [1]: ' 
+            else
+              options=("Starter" "Production")
+              PS3='Enter a valid option [1 to 2]: '
+            fi
             select opt in "${options[@]}"
             do
                 case $opt in
@@ -1046,12 +1072,14 @@ function select_user(){
     user_result=$(${CLI_CMD} get user 2>&1)
     user_substring="No resources found"
     user_forbidden="cannot list resource"
+    NON_ADMIN="false"
     if [[ $user_result == *"$user_substring"* ]];
     then
         clear
-        echo -e "\x1B[1;31mAt least one user must be available in order to proceed.\n\x1B[0m" 
-        echo -e "\x1B[1;31mPlease refer to the README for the requirements and instructions.  The script will now exit.!\n\x1B[0m" 
-        exit 1 
+        echo -e "\x1B[1m[INFO] No user found in cluster.\n\x1B[0m" 
+        echo -e "\x1B[33;5mATTENTION: \x1B[0m\x1B[1mWhen you run cp4a-deployment.sh script, please use cluster admin user.\n\x1B[0m"
+        NON_ADMIN="true"
+        sleep 5
     fi
     if [[ $user_result == *"$user_forbidden"* ]];
     then
@@ -1061,33 +1089,41 @@ function select_user(){
         exit 1 
     fi
     echo
-    if [ -z "$CP4BA_AUTO_CLUSTER_USER" ]; then
-        userlist=$(${CLI_CMD} get user|awk '{if(NR>1){if(NR==2){ arr=$1; }else{ arr=arr" "$1; }} } END{ print arr }')
-        COLUMNS=12
-        echo -e "\x1B[1mHere are the existing users on this cluster: \x1B[0m"
-        options=($userlist)
-        usernum=${#options[*]}
-        PS3='Enter an existing username in your cluster, valid option [1 to '${usernum}'], non-admin is suggested: '
-        select opt in "${options[@]}"
-        do
-            if [[ -n "$opt" && "${options[@]}" =~ $opt ]]; then
-                user_name=$opt
-                break
-            else
-                echo "invalid option $REPLY"
+    if [[ $NON_ADMIN == "false" ]]; then
+        if [ -z "$CP4BA_AUTO_CLUSTER_USER" ]; then
+            userlist=$(${CLI_CMD} get user|awk '{if(NR>1){if(NR==2){ arr=$1; }else{ arr=arr" "$1; }} } END{ print arr }')
+            COLUMNS=12
+            echo -e "\x1B[1mHere are the existing users on this cluster: \x1B[0m"
+            options=($userlist)
+            options=( "Cluster Admin" "${options[@]}" )
+            usernum=${#options[*]}
+            PS3='Enter an existing username in your cluster, valid option [1 to '${usernum}'], non-admin is suggested: '
+            select opt in "${options[@]}"
+            do
+                if [[ -n "$opt" && "${options[@]}" =~ $opt ]]; then
+                    user_name=$opt
+                    break
+                else
+                    echo "invalid option $REPLY"
+                fi
+            done
+            if [ "$user_name" == "Cluster Admin" ]; then
+                echo -e "\x1B[33;5mATTENTION: \x1B[0m\x1B[1mWhen you run cp4a-deployment.sh script, please use cluster admin user.\x1B[0m"
+                sleep 5
             fi
-        done
-    else
-        ${CLI_CMD} get user ${CP4BA_AUTO_CLUSTER_USER} >/dev/null 2>&1
-        returnValue=$?
-        if [ "$returnValue" == 1 ]; then
-            echo -e "\x1B[1;31mNo found user \"${CP4BA_AUTO_CLUSTER_USER}\", please set a valid user. The script will exit...!\n\x1B[0m" 
-            exit 1
         else
-            user_name=$CP4BA_AUTO_CLUSTER_USER
-            echo -e "\x1B[1mSelected the existing users: \x1B[0m${CP4BA_AUTO_CLUSTER_USER}"
-        fi        
-    fi  
+            ${CLI_CMD} get user ${CP4BA_AUTO_CLUSTER_USER} >/dev/null 2>&1
+            returnValue=$?
+            if [ "$returnValue" == 1 ]; then
+                echo -e "\x1B[1;31mNo found user \"${CP4BA_AUTO_CLUSTER_USER}\"!\n\x1B[0m" 
+                echo -e "\x1B[33;5mATTENTION: \x1B[0m\x1B[1mWhen you run cp4a-deployment.sh script, please use cluster admin user.\n\x1B[0m"
+                sleep 5
+            else
+                user_name=$CP4BA_AUTO_CLUSTER_USER
+                echo -e "\x1B[1mSelected the existing users: \x1B[0m${CP4BA_AUTO_CLUSTER_USER}"
+            fi        
+        fi
+    fi
 }
 
 function display_installationprompt(){
@@ -1105,19 +1141,10 @@ function check_storage_class() {
         # echo ""
         # echo "Applying no_root_squash for demo DB2 deployment on ROKS using CLI"
         # oc get no -l node-role.kubernetes.io/worker --no-headers -o name | xargs -I {} --  oc debug {} -- chroot /host sh -c 'grep "^Domain = slnfsv4.coms" /etc/idmapd.conf || ( sed -i "s/.*Domain =.*/Domain = slnfsv4.com/g" /etc/idmapd.conf; nfsidmap -c; rpc.idmapd )' >> ${LOG_FILE}
-
-       create_storage_classes_roks
+       printf "\n"
+       echo -e "\x1B[1mPlease use available storage classes.\x1B[0m"
     fi
     display_storage_classes_existing
-}
-
-function apply_no_root_squash() {
- if [[ $PLATFORM_SELECTED == "ROKS" ]] && [[ "$DEPLOYMENT_TYPE" == "starter" ]]; 
- then
-        echo ""
-        echo "Applying no_root_squash for demo DB2 deployment on ROKS using CLI"
-        ${CLI_CMD} get no -l node-role.kubernetes.io/worker --no-headers -o name | xargs -I {} --  ${CLI_CMD} debug {} -- chroot /host sh -c 'grep "^Domain = slnfsv4.coms" /etc/idmapd.conf || ( sed -i "s/.*Domain =.*/Domain = slnfsv4.com/g" /etc/idmapd.conf; nfsidmap -c; rpc.idmapd )' >> ${LOG_FILE}
-fi
 }
 
 function create_storage_classes_roks() {
@@ -1393,7 +1420,7 @@ function get_local_registry_server(){
         printf "\x1B[1mThis is required to pull container images and Kubernetes secret creation: \x1B[0m"
         builtin_dockercfg_secrect_name=$(${CLI_CMD} get secret | grep default-dockercfg | awk '{print $1}')
         if [ -z "$builtin_dockercfg_secrect_name" ]; then
-            DOCKER_RES_SECRET_NAME="admin.registrykey"
+            DOCKER_RES_SECRET_NAME="ibm-entitlement-key"
         else
             DOCKER_RES_SECRET_NAME=$builtin_dockercfg_secrect_name
         fi
@@ -1715,7 +1742,7 @@ if [[ $SCRIPT_MODE == "OLM" ]];then
     get_entitlement_registry
     get_storage_class_name
     create_secret_entitlement_registry
-    allocate_operator_pvc_olm_or_cncf
+    # allocate_operator_pvc_olm_or_cncf
     prepare_olm_install
 else
     validate_docker_podman_cli
@@ -1732,14 +1759,14 @@ else
     if [[ "$use_entitlement" == "no" ]]; then
         create_secret_local_registry
     fi 
-    allocate_operator_pvc_olm_or_cncf
+    # allocate_operator_pvc_olm_or_cncf
     prepare_install
     apply_cp4a_operator
 fi
 
 # create_scc
 display_storage_classes
-apply_no_root_squash
+
 
 # if  [[ $PLATFORM_SELECTED == "OCP" || $PLATFORM_SELECTED == "ROKS" ]];
 # then

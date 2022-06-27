@@ -16,7 +16,7 @@ PARENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 # Import common utilities and environment variables
 source ${CUR_DIR}/helper/common.sh
 
-DOCKER_RES_SECRET_NAME="admin.registrykey"
+DOCKER_RES_SECRET_NAME="ibm-entitlement-key"
 DOCKER_REG_USER=""
 SCRIPT_MODE=$1
 
@@ -24,17 +24,17 @@ if [[ "$SCRIPT_MODE" == "baw-dev" || "$SCRIPT_MODE" == "dev" || "$SCRIPT_MODE" =
 then
     DOCKER_REG_SERVER="cp.stg.icr.io"
     if [[ -z $2 ]]; then
-        IMAGE_TAG_DEV="21.0.3"
+        IMAGE_TAG_DEV="22.0.1"
     else
         IMAGE_TAG_DEV=$2
     fi
-    IMAGE_TAG_FINAL="21.0.3"
+    IMAGE_TAG_FINAL="22.0.1"
 else
     DOCKER_REG_SERVER="cp.icr.io"
 fi
 DOCKER_REG_KEY=""
 REGISTRY_IN_FILE="cp.icr.io"
-OPERATOR_IMAGE=${DOCKER_REG_SERVER}/cp/cp4a/icp4a-operator:21.0.2
+# OPERATOR_IMAGE=${DOCKER_REG_SERVER}/cp/cp4a/icp4a-operator:21.0.2
 
 old_db2="docker.io\/ibmcom"
 old_db2_alpine="docker.io\/alpine"
@@ -51,10 +51,10 @@ OPERATOR_FILE=${PARENT_DIR}/descriptors/operator.yaml
 OPERATOR_FILE_TMP=$TEMP_FOLDER/.operator_tmp.yaml
 OPERATOR_FILE_BAK=$BAK_FOLDER/.operator.yaml
 
-OPERATOR_PVC_FILE=${PARENT_DIR}/descriptors/operator-shared-pvc.yaml
-OPERATOR_PVC_FILE_TMP1=$TEMP_FOLDER/.operator-shared-pvc_tmp1.yaml
-OPERATOR_PVC_FILE_TMP=$TEMP_FOLDER/.operator-shared-pvc_tmp.yaml
-OPERATOR_PVC_FILE_BAK=$BAK_FOLDER/.operator-shared-pvc.yaml
+# OPERATOR_PVC_FILE=${PARENT_DIR}/descriptors/operator-shared-pvc.yaml
+# OPERATOR_PVC_FILE_TMP1=$TEMP_FOLDER/.operator-shared-pvc_tmp1.yaml
+# OPERATOR_PVC_FILE_TMP=$TEMP_FOLDER/.operator-shared-pvc_tmp.yaml
+# OPERATOR_PVC_FILE_BAK=$BAK_FOLDER/.operator-shared-pvc.yaml
 
 
 CP4A_PATTERN_FILE_TMP=$TEMP_FOLDER/.ibm_cp4a_cr_final_tmp.yaml
@@ -72,13 +72,14 @@ OPT_COMPONENTS_CR_SELECTED=""
 OPT_COMPONENTS_SELECTED=()
 LDAP_TYPE=""
 TARGET_PROJECT_NAME=""
+CP4BA_JDBC_URL=""
 
 FOUNDATION_CR_SELECTED=""
 optional_component_arr=()
 optional_component_cr_arr=()
 foundation_component_arr=()
 FOUNDATION_FULL_ARR=("BAN" "RR" "BAS" "UMS" "AE")
-OPTIONAL_COMPONENT_FULL_ARR=("content_integration" "workstreams" "case" "business_orchestration" "ban" "bai" "css" "cmis" "es" "ier" "iccsap" "tm" "ums" "ads_designer" "ads_runtime" "app_designer" "decisionCenter" "decisionServerRuntime" "decisionRunner" "ae_data_persistence" "baw_authoring" "auto_service" "document_processing_runtime" "document_processing_designer")
+OPTIONAL_COMPONENT_FULL_ARR=("content_integration" "workstreams" "case" "business_orchestration" "ban" "bai" "css" "cmis" "es" "ier" "iccsap" "tm" "ums" "ads_designer" "ads_runtime" "app_designer" "decisionCenter" "decisionServerRuntime" "decisionRunner" "ae_data_persistence" "baw_authoring" "pfs" "baml" "auto_service" "document_processing_runtime" "document_processing_designer")
 
 function prompt_license(){
     clear
@@ -93,7 +94,7 @@ function prompt_license(){
     fi
     if [[ $retVal_baw -eq 1 ]]; then
         echo -e "\x1B[1;31mIMPORTANT: Review the IBM Cloud Pak for Business Automation license information here: \n\x1B[0m"
-        echo -e "\x1B[1;31mhttps://github.com/icp4a/cert-kubernetes/blob/21.0.2/LICENSE\n\x1B[0m"
+        echo -e "\x1B[1;31mhttp://www14.software.ibm.com/cgi-bin/weblap/lap.pl?li_formnum=L-ASAY-CCQCLE\n\x1B[0m"
         INSTALL_BAW_ONLY="No"
     fi
 
@@ -110,7 +111,31 @@ function prompt_license(){
         read -rp "" ans
         case "$ans" in
         "y"|"Y"|"yes"|"Yes"|"YES")
-            printf "\n"
+                printf "\n"
+                while true; do
+                    if [[ $retVal_baw -eq 0 ]]; then
+                        printf "\n"
+                    fi
+                    if [[ $retVal_baw -eq 1 ]]; then
+                        printf "\x1B[1mDid you deploy Content CR (CRD: contents.icp4a.ibm.com) in current cluster? (Yes/No, default: No): \x1B[0m"
+                    fi
+                    read -rp "" ans
+                    case "$ans" in
+                    "y"|"Y"|"yes"|"Yes"|"YES")
+                        printf "\n"
+                        echo -e "\x1B[1;31mThe cp4a-deployment.sh can not work with existing Content CR together, exiting now...\x1B[0m\n"
+                        exit 1            
+                        
+                        ;;
+                    "n"|"N"|"no"|"No"|"NO"|"")
+                        echo -e "Continuing...\n"
+                        break
+                        ;;
+                    *)
+                        echo -e "Answer must be \"Yes\" or \"No\"\n"
+                        ;;
+                    esac
+                done
             echo -e "Starting to Install the Cloud Pak for Business Automation Operator...\n"
             IBM_LICENS="Accept"
             validate_cli
@@ -1241,6 +1266,12 @@ function select_optional_component(){
                 elif [[ "${optional_components_list[i]}" == "Business Automation Insights" ]]
                 then
                     [[ "${choices_component[i]}" ]] && { optional_component_arr=( "${optional_component_arr[@]}" "BusinessAutomationInsights" ); msg=""; }
+                elif [[ "${optional_components_list[i]}" == "Process Federation Server" ]]
+                then
+                    [[ "${choices_component[i]}" ]] && { optional_component_arr=( "${optional_component_arr[@]}" "ProcessFederationServer" ); msg=""; }
+                elif [[ "${optional_components_list[i]}" == "Business Automation Machine Learning" ]]
+                then
+                    [[ "${choices_component[i]}" ]] && { optional_component_arr=( "${optional_component_arr[@]}" "BusinessAutomationMachineLearning" ); msg=""; }
                 elif [[ "${optional_components_list[i]}" == "Application Designer" ]]
                 then
                     [[ "${choices_component[i]}" ]] && { optional_component_arr=( "${optional_component_arr[@]}" "ApplicationDesigner" ); msg=""; }
@@ -1305,6 +1336,12 @@ function select_optional_component(){
                     elif [[ "${optional_components_list[i]}" == "Business Automation Insights" ]]
                     then
                         optional_component_arr=( "${optional_component_arr[@]}" "BusinessAutomationInsights" )
+                    elif [[ "${optional_components_list[i]}" == "Process Federation Server" ]]
+                    then
+                        optional_component_arr=( "${optional_component_arr[@]}" "ProcessFederationServer" )
+                    elif [[ "${optional_components_list[i]}" == "BusinessAutomationMachineLearning" ]]
+                    then
+                        optional_component_arr=( "${optional_component_arr[@]}" "Business Automation Machine Learning" )
                     elif [[ "${optional_components_list[i]}" == "Application Designer" ]]
                     then
                         optional_component_arr=( "${optional_component_arr[@]}" "ApplicationDesigner" )
@@ -1471,8 +1508,8 @@ function select_optional_component(){
                     ;;
                 "Business Automation Workflow Authoring and Automation Workstream Services")
                     if [[ $DEPLOYMENT_TYPE == "starter" ]]; then
-                        optional_components_list=("Case" "Content Integration" "Workstreams")
-                        optional_components_cr_list=("case" "content_integration" "workstreams")
+                        optional_components_list=("Case" "Content Integration" "Workstreams" "Process Federation Server" "Business Automation Insights" "Business Automation Machine Learning")
+                        optional_components_cr_list=("case" "content_integration" "workstreams" "pfs" "bai" "baml")
                         show_optional_components
                     # elif [[ $DEPLOYMENT_TYPE == "production" ]]; then
                     #     optional_component_cr_arr=( "${optional_component_cr_arr[@]}" "bai" )
@@ -1480,6 +1517,14 @@ function select_optional_component(){
                     fi
                     optional_component_cr_arr=( "${optional_component_cr_arr[@]}" "cmis" )
                     optional_component_cr_arr=( "${optional_component_cr_arr[@]}" "baw_authoring" )
+                    if [[ $DEPLOYMENT_TYPE == "starter" ]]; then
+                        containsElement "baml" "${optional_component_cr_arr[@]}"
+                        retVal=$?
+                        if [[ $retVal -eq 0 ]]; then
+                            optional_component_cr_arr=( "${optional_component_cr_arr[@]}" "bai" "pfs")
+                            optional_component_arr=( "${optional_component_arr[@]}" "BusinessAutomationInsights" "ProcessFederationServer")
+                        fi
+                    fi
                     optional_components_list=()
                     optional_components_cr_list=()
                     break
@@ -1737,7 +1782,7 @@ function get_local_registry_server(){
         printf "\x1B[1mThis is required to pull container images and Kubernetes secret creation: \x1B[0m"
         builtin_dockercfg_secrect_name=$(${CLI_CMD} get secret | grep default-dockercfg | awk '{print $1}')
         if [ -z "$builtin_dockercfg_secrect_name" ]; then
-            DOCKER_RES_SECRET_NAME="admin.registrykey"
+            DOCKER_RES_SECRET_NAME="ibm-entitlement-key"
         else
             DOCKER_RES_SECRET_NAME=$builtin_dockercfg_secrect_name
         fi
@@ -2512,6 +2557,11 @@ function input_information(){
         select_baw_only
     fi
     select_optional_component
+
+    # get jdbc url according to whether ICCSAP component selected
+    if [[ ( $DEPLOYMENT_TYPE == "starter" ) && (" ${optional_component_cr_arr[@]} " =~ "iccsap") || $DEPLOYMENT_TYPE == "production" ]]; then
+        get_jdbc_url
+    fi
     if [[ "$INSTALLATION_TYPE" == "new" ]]; then
         if [[ $PLATFORM_SELECTED == "other" ]]; then
             get_entitlement_registry
@@ -2606,6 +2656,7 @@ function apply_cp4a_operator(){
     # set db2_license
     ${SED_COMMAND} '/baw_license/{n;s/value:.*/value: accept/;}' ${OPERATOR_FILE_TMP}
     # Set operator image pull secret
+    ${SED_COMMAND} "s|ibm-entitlement-key|$DOCKER_RES_SECRET_NAME|g" ${OPERATOR_FILE_TMP}
     ${SED_COMMAND} "s|admin.registrykey|$DOCKER_RES_SECRET_NAME|g" ${OPERATOR_FILE_TMP}
     # Set operator image registry
     new_operator="$REGISTRY_IN_FILE\/cp\/cp4a"
@@ -2665,6 +2716,27 @@ function copy_jdbc_driver(){
     else
         echo -e "\x1B[1;31mFailed\x1B[0m"
     fi
+}
+
+
+function get_jdbc_url(){
+    while [[ $CP4BA_JDBC_URL == "" ]]; 
+    do
+        if [ -z "$CP4BA_JDBC_URL" ]; then
+            printf "\n"
+            echo -e "\x1B[1mProvide a URL to zip file that contains JDBC and/or ICCSAP drivers.\x1B[0m"
+            read -p "(optional - if not provided, the Operator will configure using the default shipped JDBC driver): " CP4BA_JDBC_URL
+            if [[ ( -z "$CP4BA_JDBC_URL" ) && (" ${optional_component_cr_arr[@]} " =~ "iccsap") ]]; then
+                printf "\n"
+                echo -e "\x1B[1;31mIBM Content Collector for SAP is selected, please provide a URL to zip file that contains ICCSAP drivers.\x1B[0m"
+                CP4BA_JDBC_URL=""          
+            elif [[ ( -z "$CP4BA_JDBC_URL" ) && ( ! " ${optional_component_cr_arr[@]} " =~ "iccsap" ) ]]; then
+                printf "\n"
+                echo -e "\x1B[1mThe Operator will configure using the default shipped JDBC driver.\x1B[0m"
+                break
+            fi
+        fi
+    done
 }
 
 function copy_sap_libraries(){
@@ -3008,10 +3080,24 @@ function merge_optional_components(){
                 "bai")
                     if [[ (" ${PATTERNS_CR_SELECTED[@]} " =~ "workflow-runtime") && (" ${PATTERNS_CR_SELECTED[@]} " =~ "workstreams") ]]; then
                         break
+                    elif [[ "${DEPLOYMENT_TYPE}" == "starter" && (" ${OPT_COMPONENTS_CR_SELECTED[@]} " =~ "baml") && (" ${PATTERNS_CR_SELECTED[@]} " =~ "workflow-workstreams") ]]; then
+                        break
                     else
                         ${YQ_CMD} d -i ${CP4A_PATTERN_FILE_TMP} spec.bai_configuration
                         break
                     fi
+                    ;;
+                "pfs")
+                    if [[ "${DEPLOYMENT_TYPE}" == "starter" && (" ${PATTERNS_CR_SELECTED[@]} " =~ "workflow-workstreams") ]]; then
+                        ${YQ_CMD} d -i ${CP4A_PATTERN_FILE_TMP} spec.pfs_configuration
+                    fi
+                    break
+                    ;;
+                "baml")
+                    if [[ "${DEPLOYMENT_TYPE}" == "starter" && (" ${PATTERNS_CR_SELECTED[@]} " =~ "workflow-workstreams") ]]; then
+                        ${YQ_CMD} d -i ${CP4A_PATTERN_FILE_TMP} spec.baml_configuration
+                    fi
+                    break
                     ;;
                 "ads_designer")
                     break
@@ -3643,6 +3729,13 @@ function apply_pattern_cr(){
     ${YQ_CMD} d -i ${CP4A_PATTERN_FILE_TMP} spec.shared_configuration.image_pull_secrets
     ${YQ_CMD} w -i ${CP4A_PATTERN_FILE_TMP} spec.shared_configuration.image_pull_secrets.[0] "$DOCKER_RES_SECRET_NAME"
 
+    # set sc_drivers_url
+    if [ -z "$CP4BA_JDBC_URL" ]; then
+        ${YQ_CMD} w -i ${CP4A_PATTERN_FILE_TMP} spec.shared_configuration.sc_drivers_url ""
+    else
+        ${YQ_CMD} w -i ${CP4A_PATTERN_FILE_TMP} spec.shared_configuration.sc_drivers_url "$CP4BA_JDBC_URL"
+    fi
+    
     # support profile size for production
     if [[ $DEPLOYMENT_TYPE == "production" ]]; then
         ${YQ_CMD} w -i ${CP4A_PATTERN_FILE_TMP} spec.shared_configuration.sc_deployment_profile_size "$PROFILE_TYPE"
@@ -3899,6 +3992,12 @@ function apply_pattern_cr(){
     if [[ $PLATFORM_SELECTED == "other" ]]; then
         ${YQ_CMD} d -i ${CP4A_PATTERN_FILE_TMP} spec.shared_configuration.storage_configuration.sc_block_storage_classname
     fi
+    
+    if [[ $DEPLOYMENT_TYPE == "starter" ]]; then
+        if [[ (" ${PATTERNS_CR_SELECTED[@]} " =~ "workflow-workstreams" || " ${PATTERNS_CR_SELECTED[@]} " =~ "decisions_ads") && !(" ${PATTERNS_CR_SELECTED[@]} " =~ "document_processing") && !(" ${PATTERNS_CR_SELECTED[@]} " =~ "application") ]]; then
+            ${YQ_CMD} d -i ${CP4A_PATTERN_FILE_TMP} spec.bastudio_configuration.playback_server
+        fi
+    fi
 
     ${COPY_CMD} -rf ${CP4A_PATTERN_FILE_TMP} ${CP4A_PATTERN_FILE_BAK}
     if [[ "$DEPLOYMENT_TYPE" == "starter" && "$INSTALLATION_TYPE" == "new" && !("$SCRIPT_MODE" == "review" || "$SCRIPT_MODE" == "OLM") ]];then
@@ -4005,6 +4104,12 @@ function show_summary(){
             elif [[ "${each_opt_component}" == "BusinessAutomationInsights" ]]
             then
                 printf '   * %s\n' "Business Automation Insights"
+            elif [[ "${each_opt_component}" == "ProcessFederationServer" ]]
+            then
+                printf '   * %s\n' "Process Federation Server"
+            elif [[ "${each_opt_component}" == "BusinessAutomationMachineLearning" ]]
+            then
+                printf '   * %s\n' "Business Automation Machine Learning"
             elif [[ "${each_opt_component}" == "ApplicationDesigner" ]]
             then
                 printf '   * %s\n' "Application Designer"
@@ -4046,12 +4151,16 @@ function show_summary(){
             then
                 echo -e "\x1B[1;31m3. File storage classname(RWX):\x1B[0m ${STORAGE_CLASS_NAME}"
                 echo -e "\x1B[1;31m4. Block storage classname(RWO):\x1B[0m ${BLOCK_STORAGE_CLASS_NAME}"
+                if [[ " ${optional_component_cr_arr[@]} " =~ "iccsap" ]]; then
+                    echo -e "\x1B[1;31m5. URL to zip file for JDBC and/or ICCSAP drivers:\x1B[0m ${CP4BA_JDBC_URL}"
+                fi
             else
                 echo -e "\x1B[1;31m3. File storage classname(RWX):\x1B[0m"
                 printf '   * \x1B[1;31m%s\x1B[0m %s\n' "Slow:" "${SLOW_STORAGE_CLASS_NAME}"
                 printf '   * \x1B[1;31m%s\x1B[0m %s\n' "Medium:" "${MEDIUM_STORAGE_CLASS_NAME}"
                 printf '   * \x1B[1;31m%s\x1B[0m %s\n' "Fast:" "${FAST_STORAGE_CLASS_NAME}"
                 echo -e "\x1B[1;31m4. Block storage classname(RWO): \x1B[0m${BLOCK_STORAGE_CLASS_NAME}"
+                echo -e "\x1B[1;31m5. URL to zip file for JDBC and/or ICCSAP drivers:\x1B[0m ${CP4BA_JDBC_URL}"
             fi           
         else
             if  [[ $PLATFORM_SELECTED == "OCP" ]]; then
@@ -4064,12 +4173,16 @@ function show_summary(){
             then
                 echo -e "\x1B[1;31m4. File storage classname(RWX):\x1B[0m ${STORAGE_CLASS_NAME}"
                 echo -e "\x1B[1;31m5. Block storage classname(RWO):\x1B[0m ${BLOCK_STORAGE_CLASS_NAME}"
+                if [[ " ${optional_component_cr_arr[@]} " =~ "iccsap" ]]; then
+                    echo -e "\x1B[1;31m6. URL to zip file for JDBC and/or ICCSAP drivers:\x1B[0m ${CP4BA_JDBC_URL}"
+                fi
             else
                 echo -e "\x1B[1;31m4. File storage classname(RWX):\x1B[0m"
                 printf '   * \x1B[1;31m%s\x1B[0m %s\n' "Slow:" "${SLOW_STORAGE_CLASS_NAME}"
                 printf '   * \x1B[1;31m%s\x1B[0m %s\n' "Medium:" "${MEDIUM_STORAGE_CLASS_NAME}"
                 printf '   * \x1B[1;31m%s\x1B[0m %s\n' "Fast:" "${FAST_STORAGE_CLASS_NAME}"
                 echo -e "\x1B[1;31m5. Block storage classname(RWO): \x1B[0m${BLOCK_STORAGE_CLASS_NAME}"
+                echo -e "\x1B[1;31m6. URL to zip file for JDBC and/or ICCSAP drivers:\x1B[0m ${CP4BA_JDBC_URL}"
             fi            
         fi
     else
@@ -4077,6 +4190,9 @@ function show_summary(){
         then
             echo -e "\x1B[1;31m3. File storage classname(RWX):\x1B[0m ${STORAGE_CLASS_NAME}"
             echo -e "\x1B[1;31m4. Block storage classname(RWO):\x1B[0m ${BLOCK_STORAGE_CLASS_NAME}"
+            if [[ " ${optional_component_cr_arr[@]} " =~ "iccsap" ]]; then
+                echo -e "\x1B[1;31m5. URL to zip file for JDBC and/or ICCSAP drivers:\x1B[0m ${CP4BA_JDBC_URL}"
+            fi
         else
             if [[ $PLATFORM_SELECTED == "other" ]]; then
                 echo -e "\x1B[1;31m7. File storage classname(RWX):\x1B[0m"
@@ -4087,8 +4203,12 @@ function show_summary(){
         printf '   * \x1B[1;31m%s\x1B[0m %s\n' "Slow:" "${SLOW_STORAGE_CLASS_NAME}"
         printf '   * \x1B[1;31m%s\x1B[0m %s\n' "Medium:" "${MEDIUM_STORAGE_CLASS_NAME}"
         printf '   * \x1B[1;31m%s\x1B[0m %s\n' "Fast:" "${FAST_STORAGE_CLASS_NAME}"
+        if [[ $PLATFORM_SELECTED == "other" ]]; then
+            echo -e "\x1B[1;31m8. URL to zip file for JDBC and/or ICCSAP drivers:\x1B[0m ${CP4BA_JDBC_URL}"
+        fi
         if [[ $PLATFORM_SELECTED == "OCP" || $PLATFORM_SELECTED == "ROKS" ]]; then
             echo -e "\x1B[1;31m4. Block storage classname(RWO):\x1B[0m ${BLOCK_STORAGE_CLASS_NAME}"
+            echo -e "\x1B[1;31m5. URL to zip file for JDBC and/or ICCSAP drivers:\x1B[0m ${CP4BA_JDBC_URL}"
         fi
     fi
     echo -e "\x1B[1m*******************************************************\x1B[0m"
@@ -4096,7 +4216,7 @@ function show_summary(){
 
 function prepare_pattern_file(){
     ${COPY_CMD} -rf "${OPERATOR_FILE}" "${OPERATOR_FILE_BAK}"
-    ${COPY_CMD} -rf "${OPERATOR_PVC_FILE}" "${OPERATOR_PVC_FILE_BAK}"
+    # ${COPY_CMD} -rf "${OPERATOR_PVC_FILE}" "${OPERATOR_PVC_FILE_BAK}"
 
     if [[ "$DEPLOYMENT_TYPE" == "production" ]];then
         DEPLOY_TYPE_IN_FILE_NAME="production"
@@ -4213,12 +4333,12 @@ while true; do
                 # read -rsn1 -p"Press any key to continue";echo
             else
                 if [ "$use_entitlement" = "no" ] ; then
-                    isReady=$(${CLI_CMD} get secret | grep admin.registrykey)
+                    isReady=$(${CLI_CMD} get secret | grep ibm-entitlement-key)
                     if [[ -z $isReady ]]; then
-                        echo "NOT found secret \"admin.registrykey\", exiting..."
+                        echo "NOT found secret \"ibm-entitlement-key\", exiting..."
                         exit 1
                     else
-                        echo "Found secret \"admin.registrykey\", continue...."
+                        echo "Found secret \"ibm-entitlement-key\", continue...."
                     fi
                 fi
             fi
@@ -4233,9 +4353,9 @@ while true; do
             printf "\n"
             if  [[ $PLATFORM_SELECTED == "OCP" || $PLATFORM_SELECTED == "ROKS" ]];
             then
-                printf "\x1B[1mEnter the number from 1 to 4 that you want to change: \x1B[0m"
+                printf "\x1B[1mEnter the number from 1 to 5 that you want to change: \x1B[0m"
             else
-                printf "\x1B[1mEnter the number from 1 to 7 that you want to change: \x1B[0m"
+                printf "\x1B[1mEnter the number from 1 to 8 that you want to change: \x1B[0m"
             fi
 
             read -rp "" ans
@@ -4245,18 +4365,28 @@ while true; do
                 "1")
                     select_pattern
                     select_optional_component
+                    if [[ ( -z "$CP4BA_JDBC_URL" ) && (" ${optional_component_cr_arr[@]} " =~ "iccsap") ]]; then
+                        get_jdbc_url
+                    fi
                     break
                     ;;
                 "2")
                     select_optional_component
+                    if [[ ( -z "$CP4BA_JDBC_URL" ) && (" ${optional_component_cr_arr[@]} " =~ "iccsap") ]]; then
+                        get_jdbc_url
+                    fi
                     break
                     ;;
                 "3"|"4")
                     get_storage_class_name
                     break
                     ;;
+                "5")
+                    get_jdbc_url
+                    break
+                    ;;
                 *)
-                    echo -e "\x1B[1mEnter a valid number [1 to 4] \x1B[0m"
+                    echo -e "\x1B[1mEnter a valid number [1 to 5] \x1B[0m"
                     ;;
                 esac
             else
@@ -4264,10 +4394,16 @@ while true; do
                 "1")
                     select_pattern
                     select_optional_component
+                    if [[ ( -z "$CP4BA_JDBC_URL" ) && (" ${optional_component_cr_arr[@]} " =~ "iccsap") ]]; then
+                        get_jdbc_url
+                    fi
                     break
                     ;;
                 "2")
                     select_optional_component
+                    if [[ ( -z "$CP4BA_JDBC_URL" ) && (" ${optional_component_cr_arr[@]} " =~ "iccsap") ]]; then
+                        get_jdbc_url
+                    fi
                     break
                     ;;
                 "3")
@@ -4290,8 +4426,12 @@ while true; do
                     get_storage_class_name
                     break
                     ;;
+                "8")
+                    get_jdbc_url
+                    break
+                    ;;
                 *)
-                    echo -e "\x1B[1mEnter a valid number [1 to 7] \x1B[0m"
+                    echo -e "\x1B[1mEnter a valid number [1 to 8] \x1B[0m"
                     ;;
                 esac
             fi

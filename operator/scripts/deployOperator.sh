@@ -38,7 +38,7 @@ function show_help {
     echo "Options:"
     echo "  -h  Display help"
     echo "  -i  Operator image name"
-    echo "      For example: cp.icr.io/cp/icp4a-operator:20.0.3 or registry_url/icp4a-operator:version"
+    echo "      For example: cp.icr.io/cp/icp4a-operator:22.0.1 or registry_url/icp4a-operator:version"
     echo "  -p  Optional: Pull secret to use to connect to the registry"
     echo "  -n  The namespace to deploy Operator"
     echo "  -t  The deployment type: starter or custom"
@@ -210,7 +210,7 @@ if [[ $LICENSE_ACCEPTED != "accept" ]]; then
 fi
 
 if [[ $RUNTIME_MODE == "dev" ]]; then
-    OLM_CATALOG=${PARENT_DIR}/descriptors/op-olm/cp4a_catalogsource.yaml
+    OLM_CATALOG=${PARENT_DIR}/descriptors/op-olm/cp4a_catalogsource_dev.yaml
     online_source="ibm-cp4a-operator-catalog"
 elif [ $RUNTIME_MODE == "baw-dev" ]]; then
     online_source="ibm-bawoperator-catalog"
@@ -218,7 +218,7 @@ elif [ $RUNTIME_MODE == "baw" ]]; then
     online_source="ibm-bawoperator-catalog"
 else
     OLM_CATALOG=${PARENT_DIR}/descriptors/op-olm/catalog_source.yaml
-    online_source="ibm-operator-catalog"
+    online_source="ibm-cp4a-operator-catalog"
 fi
 
 if [[ $LICENSE_ACCEPTED == "accept" ]]; then
@@ -234,7 +234,7 @@ if [[ $LICENSE_ACCEPTED == "accept" ]]; then
     # Change the pullSecrets if needed
     if [ ! -z ${PULLSECRET} ]; then
         echo "Setting pullSecrets to $PULLSECRET"
-        sed -e "s|admin.registrykey|$PULLSECRET|g" ${CUR_DIR}/../deployoperator.yaml > ${CUR_DIR}/../deployoperatorsav.yaml ;  mv ${CUR_DIR}/../deployoperatorsav.yaml ${CUR_DIR}/../deployoperator.yaml
+        sed -e "s|ibm-entitlement-key|$PULLSECRET|g" ${CUR_DIR}/../deployoperator.yaml > ${CUR_DIR}/../deployoperatorsav.yaml ;  mv ${CUR_DIR}/../deployoperatorsav.yaml ${CUR_DIR}/../deployoperator.yaml
     else
         sed -e '/imagePullSecrets:/{N;d;}' ${CUR_DIR}/../deployoperator.yaml > ${CUR_DIR}/../deployoperatorsav.yaml ;  mv ${CUR_DIR}/../deployoperatorsav.yaml ${CUR_DIR}/../deployoperator.yaml
     fi
