@@ -16,7 +16,7 @@ metadata:
     app.kubernetes.io/instance: ibm-dba
     app.kubernetes.io/managed-by: ibm-dba
     app.kubernetes.io/name: ibm-dba
-    release: 21.0.3
+    release: 22.0.1
 spec:
   group: icp4a.ibm.com
   names:
@@ -231,6 +231,9 @@ spec:
                   root_ca_secret:
                     type: string
                     nullable: true 
+                  sc_drivers_url:
+                    type: string
+                    nullable: true
                   sc_ingress_enable:
                     type: boolean
                   sc_ingress_tls_secret_name: 
